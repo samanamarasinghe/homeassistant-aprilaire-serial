@@ -1,0 +1,10 @@
+{
+  "domain": "aprilaire_thermostat",
+  "name": "Aprilaire Thermostat",
+  "version": "1.0.0",
+  "documentation": "https://your-docs-url",
+  "dependencies": [],
+  "codeowners": ["@your-github-username"],
+  "requirements": ["pyserial"]
+}
+
