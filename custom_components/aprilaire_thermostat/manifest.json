@@ -2,9 +2,10 @@
   "domain": "aprilaire_thermostat",
   "name": "Aprilaire Thermostat",
   "version": "1.0.0",
-  "documentation": "https://your-docs-url",
+  "documentation": "https://github.com/samanamarasinghe/homeassistant-components/tree/main/custom_components/aprilaire_thermostat",
   "dependencies": [],
-  "codeowners": ["@your-github-username"],
-  "requirements": ["pyserial"]
+  "codeowners": ["@samanamarasinghe"],
+  "requirements": ["pyserial"],
+  "iot_class": "local_polling"
 }
 
