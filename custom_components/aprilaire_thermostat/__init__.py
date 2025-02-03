@@ -2,8 +2,9 @@ import logging
 
 # Import necessary Home Assistant components
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
 from homeassistant.const import CONF_PORT, CONF_BAUDRATE
+from homeassistant.core import HomeAssistant
+
 
 # Define constants
 DOMAIN = "aprilaire_thermostat"
