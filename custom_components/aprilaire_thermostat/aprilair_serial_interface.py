@@ -82,7 +82,8 @@ class AprilaireThermostatSerialInterface:
         thermostats = [line for line in response.split("\n") if line.startswith("SN")]
         names = []
         for sn in thermostats:
-            names.append(self.get_name(sn))
+            nm = await self.get_name(sn)
+            names.append(nm)
         _LOGGER.info(f"ASI: Thermostats found: {thermostats}")
         return thermostats, names
 
