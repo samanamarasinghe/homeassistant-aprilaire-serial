@@ -52,10 +52,8 @@ class AprilaireThermostat(ClimateEntity):
         return UnitOfTemperature.FAHRENHEIT
 
     @property
-    async def async_current_temperature(self): # was current_temperature(self)
+    def current_temperature(self): 
         """Return the current temperature."""
-        self._current_temperature = await self._interface.get_temprature(self._sn)
-        self.async_write_ha_state()
         return self._current_temperature
 
     @property
@@ -69,10 +67,8 @@ class AprilaireThermostat(ClimateEntity):
             return None
 
     @property
-    async def async_get_hvac_mode(self): # was hvac_mode(self)
+    def hvac_mode(self): 
         """Return the current HVAC mode."""
-        self._hvac_mode = await self._interface.get_mode(self._sn)
-        self.async_write_ha_state()
         return self._hvac_mode
 
     @property
@@ -94,14 +90,14 @@ class AprilaireThermostat(ClimateEntity):
             self._target_temperature = target_temp
             self.async_write_ha_state()
 
-    async def async_set_hvac_mode(self, hvac_mode):
+    async def async_set_hvac_mode(self, mode):
         """Set the HVAC mode for the thermostat."""
-        if hvac_mode not in SUPPORTED_HVAC_MODES:
-            _LOGGER.error("Unsupported HVAC mode: %s", hvac_mode)
+        if mode not in SUPPORTED_HVAC_MODES:
+            _LOGGER.error("Unsupported HVAC mode: %s", mode)
             return
 
-        await self._interface.set_mode(self._sn, hvac_mode)
-        self._hvac_mode = hvac_mode
+        await self._interface.set_mode(self._sn, mode)
+        self._hvac_mode = mode
         self.async_write_ha_state()
 
     async def async_update(self):
