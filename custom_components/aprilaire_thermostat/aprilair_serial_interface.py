@@ -80,8 +80,11 @@ class AprilaireThermostatSerialInterface:
         self.send_command("SN?#")
         response = await self.read_response()
         thermostats = [line for line in response.split("\n") if line.startswith("SN")]
+        names = []
+        for sn in thermostats:
+            names.append(self.get_name(sn))
         _LOGGER.info(f"ASI: Thermostats found: {thermostats}")
-        return thermostats
+        return thermostats, names
 
     async def get_temperature(self, sn):
         """Get the current temperature for a specific thermostat."""
@@ -125,6 +128,15 @@ class AprilaireThermostatSerialInterface:
         else:
             _LOGGER.error(f"ASI: no M= in {response} for mode for {sn}")
         return None
+    
+    async def get_name(self, sn):
+        self.send_command(f"{sn}NAME?")
+        response = await self.read_response()
+        # Parse M=<mode>
+        if response:
+            return response
+        else:
+            return None
     
 
     async def set_mode(self, sn, inmode):

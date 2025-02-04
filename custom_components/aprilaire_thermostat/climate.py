@@ -16,25 +16,26 @@ SUPPORTED_HVAC_MODES = [HVACMode.OFF, HVACMode.HEAT, HVACMode.COOL, HVACMode.AUT
 async def async_setup_entry(hass, config_entry, async_add_entities):
     """Setup climate entities for Aprilaire thermostats."""
     interface = AprilaireThermostatSerialInterface()
-    thermostats = await interface.query_thermostats()
+    thermostats, names = await interface.query_thermostats()
 
     if not thermostats:
         _LOGGER.error("No thermostats found")
         interface.close()
         return
 
-    entities = [AprilaireThermostat(interface, sn) for sn in thermostats]
+    entities = [AprilaireThermostat(interface, sn, nm) for sn, nm in zip(thermostats, names)]
     async_add_entities(entities)
+
     _LOGGER.info("Aprilaire climate entities added successfully.")
 
 class AprilaireThermostat(ClimateEntity):
     """Representation of an Aprilaire thermostat."""
 
-    def __init__(self, interface, sn):
+    def __init__(self, interface, sn, nm):
         """Initialize the thermostat entity."""
         self._interface = interface
         self._sn = sn
-        self._name = f"Aprilaire Thermostat {sn}"
+        self._name = f"Aprilaire Thermostat {sn} ({nm})"
         self._current_temperature = None
         self._setpoint_cool_temperature = None
         self._setpoint_heat_temperature = None
