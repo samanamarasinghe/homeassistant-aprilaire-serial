@@ -3,6 +3,7 @@ import time
 import logging
 import asyncio
 
+
 _LOGGER = logging.getLogger(__name__)
 
 class AprilaireThermostatSerialInterface:

@@ -6,6 +6,7 @@ from homeassistant.components.climate.const import (
 from homeassistant.util.unit_system import UnitOfTemperature
 import logging
 from .aprilair_serial_interface import AprilaireThermostatSerialInterface
+from .const import ATTR_TEMPERATURE
 
 
 _LOGGER = logging.getLogger(__name__)
@@ -15,7 +16,7 @@ SUPPORTED_HVAC_MODES = [HVACMode.OFF, HVACMode.HEAT, HVACMode.COOL, HVACMode.AUT
 async def async_setup_entry(hass, config_entry, async_add_entities):
     """Setup climate entities for Aprilaire thermostats."""
     interface = AprilaireThermostatSerialInterface()
-    thermostats = interface.query_thermostats()
+    thermostats = await interface.query_thermostats()
 
     if not thermostats:
         _LOGGER.error("No thermostats found")
@@ -79,8 +80,8 @@ class AprilaireThermostat(ClimateEntity):
         if ATTR_TEMPERATURE in kwargs:
             target_temp = kwargs[ATTR_TEMPERATURE]
             _LOGGER.info("Setting target temperature to %s°F for %s", target_temp, self._sn)
-            self._interface.set_setpoint(self._sn, "SETPOINTHEAT", target_temp)
-            self._target_temperature = target_temp
+            await self._interface.set_setpoint(self._sn, "SETPOINTHEAT", target_temp)
+            await self._target_temperature = target_temp
             self.async_write_ha_state()
 
     async def async_set_hvac_mode(self, hvac_mode):
@@ -99,7 +100,7 @@ class AprilaireThermostat(ClimateEntity):
         _LOGGER.debug("Updating Aprilaire thermostat %s", self._sn)
 
         # Get current temperature
-        self._current_temperature = self._interface.get_temperature(self._sn)
+        await self._current_temperature = self._interface.get_temperature(self._sn)
 
         # Get target temperature (e.g., setpoint)
         # Here, you could implement separate commands for reading setpoints if needed
