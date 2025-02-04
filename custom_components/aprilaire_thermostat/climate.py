@@ -3,14 +3,14 @@ from homeassistant.components.climate.const import (
     ClimateEntityFeature,
     HVACMode,
 )
-from homeassistant.const import TEMP_FAHRENHEIT, ATTR_TEMPERATURE
+from homeassistant.util.unit_system import UnitOfTemperature
 import logging
-from .aprilaire_serial_interface import AprilaireThermostatSerialInterface
+from .aprilair_serial_interface import AprilaireThermostatSerialInterface
 
 
 _LOGGER = logging.getLogger(__name__)
 
-SUPPORTED_HVAC_MODES = [HVAC_MODE_OFF, HVAC_MODE_HEAT, HVAC_MODE_COOL]
+SUPPORTED_HVAC_MODES = [HVACMode.OFF, HVACMode.HEAT, HVACMode.COOL, HVACMode.AUTO]
 
 async def async_setup_entry(hass, config_entry, async_add_entities):
     """Setup climate entities for Aprilaire thermostats."""
@@ -47,7 +47,7 @@ class AprilaireThermostat(ClimateEntity):
     @property
     def temperature_unit(self):
         """Return the unit of measurement for temperature."""
-        return TEMP_FAHRENHEIT
+        return UnitOfTemperature.FAHRENHEIT
 
     @property
     def current_temperature(self):

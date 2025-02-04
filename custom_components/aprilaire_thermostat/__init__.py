@@ -24,9 +24,11 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry):
 
     try:
         # Run blocking code in executor to avoid blocking the event loop
+        _LOGGER.info(f"AINI: Starting serial connection to {port} at baud {baudrate}")
         serial_connection = await hass.async_add_executor_job(setup_serial_connection, port, baudrate)
         if not serial_connection:
             raise ConfigEntryNotReady("Unable to establish serial connection")
+        _LOGGER.info(f"AINI: Serial connection seems OK ")
 
         hass.data.setdefault(DOMAIN, {})
         hass.data[DOMAIN]["serial_connection"] = serial_connection

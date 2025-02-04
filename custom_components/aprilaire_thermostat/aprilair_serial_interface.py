@@ -1,5 +1,6 @@
 import serial
 import time
+import logging
 
 class AprilaireThermostatSerialInterface:
     def __init__(self, port="/dev/ttyUSB0", baudrate=9600):
@@ -16,24 +17,24 @@ class AprilaireThermostatSerialInterface:
             )
             print("Serial connection established.")
         except serial.SerialException as e:
-            print(f"Failed to initialize serial connection: {e}")
+            _LOGGER.info(f"ASI: Failed to initialize serial connection: {e}")
             self.ser = None
 
     def send_command(self, command):
         if not self.ser:
-            print("Serial connection is not available.")
+            _LOGGER.info("ASI: Serial connection is not available.")
             return
 
         try:
             self.ser.reset_input_buffer()
             self.ser.write(f"{command}\r".encode('utf-8'))
-            print(f"Command sent: {command}")
+            _LOGGER.info(f"ASI: Command sent: {command}")
         except serial.SerialException as e:
             print(f"Error sending command: {e}")
 
     def read_response(self, timeout=5):
         if not self.ser:
-            print("Serial connection is not available.")
+            _LOGGER.info("ASI: Serial connection is not available.")
             return ""
 
         response_buffer = ""
