@@ -89,7 +89,7 @@ class AprilaireThermostatSerialInterface:
         response = await self.read_response()
         # Parse temperature from the response (assuming format is TEMP=XX.X)
         for line in response.split("\n"):
-            if line.startswith("T="):
+            if "T=" in line:
                 temp = line.split("=")[1].replace("F","")
                 _LOGGER.info(f"ASI: Temperature for {sn}: {temp}°F")
                 return float(temp)
@@ -115,12 +115,12 @@ class AprilaireThermostatSerialInterface:
     async def get_mode(self, sn):
         self.send_command(f"{sn}M?")
         response = await self.read_response()
-        # Parse temperature from the response (assuming format is TEMP=XX.X)
-        for line in response.split("\n"):
-            mode = self.mode_convert_from.get(line, None)
+        # Parse M=<mode>
+        for line in response.split("="):
+            mode = self.mode_convert_ret.get(line, None)
             if mode:
                 return mode
-            _LOGGER.error(f"ASI: Got {line} for mode for {sn}")
+            _LOGGER.error(f"ASI: Got {line} from {response} for mode for {sn}")
         return None
     
 
@@ -152,12 +152,12 @@ class AprilaireThermostatSerialInterface:
         response = await self.read_response()
         # Parse temperature from the response (assuming format is TEMP=XX.X)
         for line in response.split("\n"):
-            if line.startswith("SC=") or line.startswith("SH="):
+            if "SC=" in line or "SH=" in line:
                 temp = line.split("=")[1].replace("F","")
                 _LOGGER.info(f"ASI: Setpoint {setpoint_type} for {sn}: {temp}°F")
                 return float(temp)
             else:
-                _LOGGER.error(f"ASI: For setpoint temprature got {line}")
+                _LOGGER.error(f"ASI: For setpoint temprature got {line} from {response}")
         _LOGGER.error(f"ASI: No setpoint temperature data received for {sn}.")
         return None
 
@@ -177,7 +177,7 @@ class AprilaireThermostatSerialInterface:
         if "OK" in response:
             _LOGGER.info(f"ASI: Setpoint updated successfully for {sn}.")
         else:
-            _LOGGER.error(f"ASI: Failed to update setpoint for {sn}.")
+            _LOGGER.error(f"ASI: Failed to update setpoint for {sn}, got {response}")
 
     def close(self):
         if self.ser:
