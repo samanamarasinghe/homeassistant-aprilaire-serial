@@ -94,7 +94,7 @@ class AprilaireThermostatSerialInterface:
                 _LOGGER.info(f"ASI: Temperature for {sn}: {temp}°F")
                 return float(temp)
             else:
-                _LOGGER.error(f"ASI: For temprature got {line}")
+                _LOGGER.error(f"ASI: For temprature got {line} from {response}")
         _LOGGER.error(f"ASI: No temperature data received for {sn}.")
         return None
     
@@ -110,14 +110,14 @@ class AprilaireThermostatSerialInterface:
         HVACMode.HEAT : "HEAT",
         HVACMode.OFF : "OFF"
     }
-    mode_convert_from = {v: k for k,v in mode_convert_to.items()}
+    mode_convert_from = {v: k for k,v in mode_convert_ret.items()}
 
     async def get_mode(self, sn):
         self.send_command(f"{sn}M?")
         response = await self.read_response()
         # Parse M=<mode>
-        for line in response.split("="):
-            mode = self.mode_convert_ret.get(line, None)
+        for line in response.split("M="):
+            mode = self.mode_convert_from.get(line, None)
             if mode:
                 return mode
             _LOGGER.error(f"ASI: Got {line} from {response} for mode for {sn}")
@@ -158,18 +158,18 @@ class AprilaireThermostatSerialInterface:
                 return float(temp)
             else:
                 _LOGGER.error(f"ASI: For setpoint temprature got {line} from {response}")
-        _LOGGER.error(f"ASI: No setpoint temperature data received for {sn}.")
+        _LOGGER.error(f"ASI: No setpoint temperature data received for {sn} ({setpoint_type}).")
         return None
 
     async def set_setpoint(self, sn, setpoint_type, value):
         """Set the temperature setpoint (heat or cool) for a specific thermostat."""
         if setpoint_type not in [HVACMode.HEAT,  HVACMode.COOL]:
-            _LOGGER.error("ASI: Invalid setpoint type. Use 'SETPOINTHEAT' or 'SETPOINTCOOL'.")
+            _LOGGER.error("ASI: Invalid setpoint type {setpoint_type}")
             return
 
-        if setpoint_type == "SETPOINTHEAT":
+        if setpoint_type == HVACMode.HEAT:
             self.send_command(f"{sn}SH={value}")
-        elif setpoint_type == "SETPOINTCOOL":
+        elif setpoint_type == HVACMode.COOL:
             self.send_command(f"{sn}SC={value}")
         else:
             _LOGGER.error(f"ASI: Invalid Setpoint type {setpoint_type}")
@@ -177,7 +177,7 @@ class AprilaireThermostatSerialInterface:
         if "OK" in response:
             _LOGGER.info(f"ASI: Setpoint updated successfully for {sn}.")
         else:
-            _LOGGER.error(f"ASI: Failed to update setpoint for {sn}, got {response}")
+            _LOGGER.error(f"ASI: Failed to update setpoint for {sn}, got {response} ({setpoint_type}={value})")
 
     def close(self):
         if self.ser:
