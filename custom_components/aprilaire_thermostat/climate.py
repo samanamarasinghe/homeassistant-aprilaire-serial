@@ -8,7 +8,7 @@ from homeassistant.components.climate.const import (
 )
 from homeassistant.const import TEMP_FAHRENHEIT, ATTR_TEMPERATURE
 import logging
-from aprilair_serial_interface import AprilaireSerialInterface
+from aprilair_serial_interface import AprilaireThermostatSerialInterface
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -16,7 +16,7 @@ SUPPORTED_HVAC_MODES = [HVAC_MODE_OFF, HVAC_MODE_HEAT, HVAC_MODE_COOL]
 
 async def async_setup_entry(hass, config_entry, async_add_entities):
     """Setup climate entities for Aprilaire thermostats."""
-    interface = AprilaireSerialInterface()
+    interface = AprilaireThermostatSerialInterface()
     thermostats = interface.query_thermostats()
 
     if not thermostats:

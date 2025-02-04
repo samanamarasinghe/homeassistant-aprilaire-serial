@@ -1,7 +1,7 @@
 import serial
 import time
 
-class AprilaireSerialInterface:
+class AprilaireThermostatSerialInterface:
     def __init__(self, port="/dev/ttyUSB0", baudrate=9600):
         try:
             self.ser = serial.Serial(
@@ -109,7 +109,7 @@ class AprilaireSerialInterface:
 
 
 if __name__ == "__main__":
-    interface = AprilaireSerialInterface()
+    interface = AprilaireThermostatSerialInterface()
     thermostats = interface.query_thermostats()
     if thermostats:
         sn = thermostats[0]

@@ -1,2 +1,2 @@
-DOMAIN = "aprilaire"
+DOMAIN = "aprilaire_thermostat"
 

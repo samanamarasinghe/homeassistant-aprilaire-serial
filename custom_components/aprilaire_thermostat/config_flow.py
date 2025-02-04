@@ -4,8 +4,8 @@ from homeassistant.core import callback
 
 from .const import DOMAIN
 
-class AprilaireConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
-    """Handle a config flow for Aprilaire integration."""
+class AprilaireThermostatConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
+    """Handle a config flow for Aprilaire thermostat integration."""
 
     VERSION = 1
 
@@ -43,9 +43,9 @@ class AprilaireConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     @callback
     def async_get_options_flow(config_entry):
         """Define the options flow handler."""
-        return AprilaireOptionsFlowHandler(config_entry)
+        return AprilaireThermostatOptionsFlowHandler(config_entry)
 
-class AprilaireOptionsFlowHandler(config_entries.OptionsFlow):
+class AprilaireThermostatOptionsFlowHandler(config_entries.OptionsFlow):
     """Handle options flow for Aprilaire integration."""
 
     def __init__(self, config_entry):
