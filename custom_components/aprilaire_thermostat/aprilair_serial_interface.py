@@ -116,11 +116,11 @@ class AprilaireThermostatSerialInterface:
         self.send_command(f"{sn}M?")
         response = await self.read_response()
         # Parse M=<mode>
-        for line in response.split("M="):
-            mode = self.mode_convert_from.get(line, None)
-            if mode:
-                return mode
-            _LOGGER.error(f"ASI: Got {line} from {response} for mode for {sn}")
+        line = response.split("M=")[1]
+        mode = self.mode_convert_from.get(line, None)
+        if mode:
+            return mode
+        _LOGGER.error(f"ASI: Got {line} from {response} for mode for {sn}")
         return None
     
 
