@@ -1,6 +1,9 @@
 import serial
 import time
 import logging
+import asyncio
+
+_LOGGER = logging.getLogger(__name__)
 
 class AprilaireThermostatSerialInterface:
     def __init__(self, port="/dev/ttyUSB0", baudrate=9600):
@@ -32,7 +35,7 @@ class AprilaireThermostatSerialInterface:
         except serial.SerialException as e:
             print(f"Error sending command: {e}")
 
-    def read_response(self, timeout=5):
+    async def read_response(self, timeout=5):
         if not self.ser:
             _LOGGER.info("ASI: Serial connection is not available.")
             return ""
@@ -63,11 +66,11 @@ class AprilaireThermostatSerialInterface:
                 print(f"Serial error: {e}")
                 break
 
-            time.sleep(0.05)
+            await asyncio.sleep(0.05)
 
         return output_buffer.strip()
 
-    def query_thermostats(self):
+    async def query_thermostats(self):
         """Query all connected thermostats."""
         self.send_command("SN?#")
         response = self.read_response()
@@ -75,7 +78,7 @@ class AprilaireThermostatSerialInterface:
         print(f"Thermostats found: {thermostats}")
         return thermostats
 
-    def get_temperature(self, sn):
+    async def get_temperature(self, sn):
         """Get the current temperature for a specific thermostat."""
         self.send_command(f"{sn} TEMP?")
         response = self.read_response()
@@ -88,7 +91,7 @@ class AprilaireThermostatSerialInterface:
         print(f"No temperature data received for {sn}.")
         return None
 
-    def set_setpoint(self, sn, setpoint_type, value):
+    async def set_setpoint(self, sn, setpoint_type, value):
         """Set the temperature setpoint (heat or cool) for a specific thermostat."""
         if setpoint_type not in ["SETPOINTHEAT", "SETPOINTCOOL"]:
             print("Invalid setpoint type. Use 'SETPOINTHEAT' or 'SETPOINTCOOL'.")
