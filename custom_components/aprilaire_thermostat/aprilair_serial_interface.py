@@ -21,12 +21,12 @@ class AprilaireThermostatSerialInterface:
             )
             print("Serial connection established.")
         except serial.SerialException as e:
-            _LOGGER.info(f"ASI: Failed to initialize serial connection: {e}")
+            _LOGGER.error(f"ASI: Failed to initialize serial connection: {e}")
             self.ser = None
 
     def send_command(self, command):
         if not self.ser:
-            _LOGGER.info("ASI: Serial connection is not available.")
+            _LOGGER.error("ASI: Serial connection is not available.")
             return
 
         try:
@@ -34,7 +34,7 @@ class AprilaireThermostatSerialInterface:
             self.ser.write(f"{command}\r".encode('utf-8'))
             _LOGGER.info(f"ASI: Command sent: {command}")
         except serial.SerialException as e:
-            print(f"Error sending command: {e}")
+            _LOGGER.error(f"ASI: Error sending command: {e}")
 
     async def read_response(self, timeout=5):
         if not self.ser:
@@ -57,14 +57,14 @@ class AprilaireThermostatSerialInterface:
                         line, response_buffer = response_buffer.split('\r', 1)
                         line = line.strip()
                         if line:
-                            print(f"Received Line: {line}")
+                            _LOGGER.info(f"ASI: Received Line: {line}")
                             output_buffer += line + "\n"
                 else:
                     if time.time() - last_data_time > 0.5:
                         break
 
             except serial.SerialException as e:
-                print(f"Serial error: {e}")
+                _LOGGER.error(f"ASI: Serial error: {e}")
                 break
 
             await asyncio.sleep(0.05)
@@ -76,7 +76,7 @@ class AprilaireThermostatSerialInterface:
         self.send_command("SN?#")
         response = await self.read_response()
         thermostats = [line for line in response.split("\n") if line.startswith("SN")]
-        print(f"Thermostats found: {thermostats}")
+        _LOGGER.info(f"ASI: Thermostats found: {thermostats}")
         return thermostats
 
     async def get_temperature(self, sn):
@@ -87,28 +87,28 @@ class AprilaireThermostatSerialInterface:
         for line in response.split("\n"):
             if line.startswith("TEMP="):
                 temp = line.split("=")[1]
-                print(f"Temperature for {sn}: {temp}°F")
+                _LOGGER.info(f"ASI: Temperature for {sn}: {temp}°F")
                 return float(temp)
-        print(f"No temperature data received for {sn}.")
+        _LOGGER.error(f"ASI: No temperature data received for {sn}.")
         return None
 
     async def set_setpoint(self, sn, setpoint_type, value):
         """Set the temperature setpoint (heat or cool) for a specific thermostat."""
         if setpoint_type not in ["SETPOINTHEAT", "SETPOINTCOOL"]:
-            print("Invalid setpoint type. Use 'SETPOINTHEAT' or 'SETPOINTCOOL'.")
+            _LOGGER.error("ASI: Invalid setpoint type. Use 'SETPOINTHEAT' or 'SETPOINTCOOL'.")
             return
 
         self.send_command(f"{sn} {setpoint_type}={value}")
         response = await self.read_response()
         if "OK" in response:
-            print(f"Setpoint updated successfully for {sn}.")
+            _LOGGER.info(f"ASI: Setpoint updated successfully for {sn}.")
         else:
-            print(f"Failed to update setpoint for {sn}.")
+            _LOGGER.error(f"ASI: Failed to update setpoint for {sn}.")
 
     def close(self):
         if self.ser:
             self.ser.close()
-            print("Serial connection closed.")
+            _LOGGER.info("ASI: Serial connection closed.")
 
 
 
