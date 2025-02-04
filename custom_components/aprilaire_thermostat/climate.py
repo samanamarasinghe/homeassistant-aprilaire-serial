@@ -1,14 +1,12 @@
 from homeassistant.components.climate import ClimateEntity
 from homeassistant.components.climate.const import (
-    HVAC_MODE_OFF,
-    HVAC_MODE_HEAT,
-    HVAC_MODE_COOL,
-    SUPPORT_TARGET_TEMPERATURE,
-    SUPPORT_PRESET_MODE
+    ClimateEntityFeature,
+    HVACMode,
 )
 from homeassistant.const import TEMP_FAHRENHEIT, ATTR_TEMPERATURE
 import logging
-from aprilair_serial_interface import AprilaireThermostatSerialInterface
+from .aprilaire_serial_interface import AprilaireThermostatSerialInterface
+
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -38,7 +36,7 @@ class AprilaireThermostat(ClimateEntity):
         self._name = f"Aprilaire Thermostat {sn}"
         self._current_temperature = None
         self._target_temperature = None
-        self._hvac_mode = HVAC_MODE_OFF
+        self._hvac_mode = HVACMode.OFF
         self._preset_mode = None
 
     @property
@@ -69,7 +67,7 @@ class AprilaireThermostat(ClimateEntity):
     @property
     def supported_features(self):
         """Return the features supported by this thermostat."""
-        return SUPPORT_TARGET_TEMPERATURE
+        return ClimateEntityFeature.TARGET_TEMPERATURE
 
     @property
     def hvac_modes(self):
@@ -110,6 +108,6 @@ class AprilaireThermostat(ClimateEntity):
         # For now, simulate it as heating if temperature is below a threshold
         if self._current_temperature is not None and self._target_temperature is not None:
             if self._current_temperature < self._target_temperature:
-                self._hvac_mode = HVAC_MODE_HEAT
+                self._hvac_mode = HVACMode.HEAT
             else:
-                self._hvac_mode = HVAC_MODE_OFF
+                self._hvac_mode = HVACMode.OFF

@@ -33,7 +33,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry):
         _LOGGER.error(f"Failed to set up serial connection: {e}")
         raise ConfigEntryNotReady from e
 
-    await hass.config_entries.async_forward_entry_setups(entry, ["climate"])
+    hass.async_create_task(
+        hass.config_entries.async_forward_entry_setup(entry, "climate")
+    )
     return True
 
 async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry):

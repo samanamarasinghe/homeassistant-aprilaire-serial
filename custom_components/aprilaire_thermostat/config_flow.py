@@ -48,9 +48,9 @@ class AprilaireThermostatConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 class AprilaireThermostatOptionsFlowHandler(config_entries.OptionsFlow):
     """Handle options flow for Aprilaire integration."""
 
-    def __init__(self, config_entry):
-        """Initialize Aprilaire options flow."""
-        self.config_entry = config_entry
+#    def __init__(self, config_entry):
+#        """Initialize Aprilaire options flow."""
+
 
     async def async_step_init(self, user_input=None):
         """Manage the options."""
