@@ -117,7 +117,7 @@ class AprilaireThermostatSerialInterface:
         response = await self.read_response()
         # Parse temperature from the response (assuming format is TEMP=XX.X)
         for line in response.split("\n"):
-            mode = mode_convert_from.get(line, None)
+            mode = self.mode_convert_from.get(line, None)
             if mode:
                 return mode
             _LOGGER.error(f"ASI: Got {line} for mode for {sn}")
@@ -126,14 +126,14 @@ class AprilaireThermostatSerialInterface:
 
     async def set_mode(self, sn, inmode):
         """Set the mode for a specific thermostat."""
-        mode = mode_convert_to.get(inmode, None)
+        mode = self.mode_convert_to.get(inmode, None)
         if not mode:
             _LOGGER.error(f"ASI: Wrong mode {inmode} given")
 
         self.send_command(f"{sn}M={mode}")
 
         response = await self.read_response()
-        if mode_convert_ret[inmode] in response:
+        if self.mode_convert_ret[inmode] in response:
             _LOGGER.info(f"ASI: Mode updated successfully for {sn} to {inmode}.")
         else:
             _LOGGER.error(f"ASI: Failed to update mode for {sn}, Got {response}.")
@@ -141,9 +141,9 @@ class AprilaireThermostatSerialInterface:
 
     async def get_setpoint(self, sn, setpoint_type):
         """Get the current temperature for a specific thermostat."""
-        if setpoint_type == "SETPOINTHEAT":
+        if setpoint_type == HVACMode.HEAT:
             self.send_command(f"{sn}SH?")
-        elif setpoint_type == "SETPOINTCOOL":
+        elif setpoint_type == HVACMode.COOL:
             self.send_command(f"{sn}SC?")
         else:
             _LOGGER.error(f"ASI: Invalid Setpoint type {setpoint_type}")
@@ -163,7 +163,7 @@ class AprilaireThermostatSerialInterface:
 
     async def set_setpoint(self, sn, setpoint_type, value):
         """Set the temperature setpoint (heat or cool) for a specific thermostat."""
-        if setpoint_type not in ["SETPOINTHEAT", "SETPOINTCOOL"]:
+        if setpoint_type not in [HVACMode.HEAT,  HVACMode.COOL]:
             _LOGGER.error("ASI: Invalid setpoint type. Use 'SETPOINTHEAT' or 'SETPOINTCOOL'.")
             return
 
