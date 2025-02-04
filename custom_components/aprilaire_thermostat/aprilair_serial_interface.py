@@ -3,6 +3,10 @@ import time
 import logging
 import asyncio
 
+from homeassistant.components.climate.const import (
+    ClimateEntityFeature,
+    HVACMode,
+)
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -81,7 +85,7 @@ class AprilaireThermostatSerialInterface:
 
     async def get_temperature(self, sn):
         """Get the current temperature for a specific thermostat."""
-        self.send_command(f"{sn} TEMP?")
+        self.send_command(f"{sn}T?")
         response = await self.read_response()
         # Parse temperature from the response (assuming format is TEMP=XX.X)
         for line in response.split("\n"):
@@ -93,6 +97,69 @@ class AprilaireThermostatSerialInterface:
                 _LOGGER.error(f"ASI: For temprature got {line}")
         _LOGGER.error(f"ASI: No temperature data received for {sn}.")
         return None
+    
+    mode_convert_to = {
+        HVACMode.AUTO : "A",
+        HVACMode.COOL : "C",
+        HVACMode.HEAT : "H",
+        HVACMode.OFF : "OFF"
+    }
+    mode_convert_ret = {
+        HVACMode.AUTO : "AUTO",
+        HVACMode.COOL : "COOL",
+        HVACMode.HEAT : "HEAT",
+        HVACMode.OFF : "OFF"
+    }
+    mode_convert_from = {v: k for k,v in mode_convert_to.items()}
+
+    async def get_mode(self, sn):
+        self.send_command(f"{sn}M?")
+        response = await self.read_response()
+        # Parse temperature from the response (assuming format is TEMP=XX.X)
+        for line in response.split("\n"):
+            mode = mode_convert_from.get(line, None)
+            if mode:
+                return mode
+            _LOGGER.error(f"ASI: Got {line} for mode for {sn}")
+        return None
+    
+
+    async def set_mode(self, sn, inmode):
+        """Set the mode for a specific thermostat."""
+        mode = mode_convert_to.get(inmode, None)
+        if not mode:
+            _LOGGER.error(f"ASI: Wrong mode {inmode} given")
+
+        self.send_command(f"{sn}M={mode}")
+
+        response = await self.read_response()
+        if mode_convert_ret[inmode] in response:
+            _LOGGER.info(f"ASI: Mode updated successfully for {sn} to {inmode}.")
+        else:
+            _LOGGER.error(f"ASI: Failed to update mode for {sn}, Got {response}.")
+
+
+    async def get_setpoint(self, sn, setpoint_type):
+        """Get the current temperature for a specific thermostat."""
+        if setpoint_type == "SETPOINTHEAT":
+            self.send_command(f"{sn}SH?")
+        elif setpoint_type == "SETPOINTCOOL":
+            self.send_command(f"{sn}SC?")
+        else:
+            _LOGGER.error(f"ASI: Invalid Setpoint type {setpoint_type}")
+            return None
+        
+        response = await self.read_response()
+        # Parse temperature from the response (assuming format is TEMP=XX.X)
+        for line in response.split("\n"):
+            if line.startswith("SC=") or line.startswith("SH="):
+                temp = line.split("=")[1].replace("F","")
+                _LOGGER.info(f"ASI: Setpoint {setpoint_type} for {sn}: {temp}°F")
+                return float(temp)
+            else:
+                _LOGGER.error(f"ASI: For setpoint temprature got {line}")
+        _LOGGER.error(f"ASI: No setpoint temperature data received for {sn}.")
+        return None
 
     async def set_setpoint(self, sn, setpoint_type, value):
         """Set the temperature setpoint (heat or cool) for a specific thermostat."""
@@ -100,7 +167,12 @@ class AprilaireThermostatSerialInterface:
             _LOGGER.error("ASI: Invalid setpoint type. Use 'SETPOINTHEAT' or 'SETPOINTCOOL'.")
             return
 
-        self.send_command(f"{sn} {setpoint_type}={value}")
+        if setpoint_type == "SETPOINTHEAT":
+            self.send_command(f"{sn}SH={value}")
+        elif setpoint_type == "SETPOINTCOOL":
+            self.send_command(f"{sn}SC={value}")
+        else:
+            _LOGGER.error(f"ASI: Invalid Setpoint type {setpoint_type}")
         response = await self.read_response()
         if "OK" in response:
             _LOGGER.info(f"ASI: Setpoint updated successfully for {sn}.")
@@ -118,9 +190,8 @@ class AprilaireThermostatSerialInterface:
 if __name__ == "__main__":
     interface = AprilaireThermostatSerialInterface()
     thermostats = interface.query_thermostats()
-    if thermostats:
-        sn = thermostats[0]
+    for sn in thermostats:
         interface.get_temperature(sn)
-        interface.set_setpoint(sn, "SETPOINTHEAT", 68)
+        interface.set_setpoint(sn, "SETPOINTHEAT", 72)
     interface.close()
 

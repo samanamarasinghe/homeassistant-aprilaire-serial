@@ -36,7 +36,8 @@ class AprilaireThermostat(ClimateEntity):
         self._sn = sn
         self._name = f"Aprilaire Thermostat {sn}"
         self._current_temperature = None
-        self._target_temperature = None
+        self._setpoint_cool_temperature = None
+        self._setpoint_heat_temperature = None
         self._hvac_mode = HVACMode.OFF
         self._preset_mode = None
 
@@ -51,18 +52,27 @@ class AprilaireThermostat(ClimateEntity):
         return UnitOfTemperature.FAHRENHEIT
 
     @property
-    def current_temperature(self):
+    async def async_current_temperature(self): # was current_temperature(self)
         """Return the current temperature."""
+        self._current_temperature = await self._interface.get_temprature(self._sn)
+        self.async_write_ha_state()
         return self._current_temperature
 
     @property
     def target_temperature(self):
         """Return the target temperature."""
-        return self._target_temperature
+        if self._hvac_mode == HVACMode.COOL:
+            return self._setpoint_cool_temperature
+        elif self._hvac_mode == HVACMode.HEAT:
+            return self._setpoint_heat_temperature
+        else:
+            return None
 
     @property
-    def hvac_mode(self):
+    async def async_get_hvac_mode(self): # was hvac_mode(self)
         """Return the current HVAC mode."""
+        self._hvac_mode = await self._interface.get_mode(self._sn)
+        self.async_write_ha_state()
         return self._hvac_mode
 
     @property
@@ -90,8 +100,7 @@ class AprilaireThermostat(ClimateEntity):
             _LOGGER.error("Unsupported HVAC mode: %s", hvac_mode)
             return
 
-        _LOGGER.info("Setting HVAC mode to %s for %s", hvac_mode, self._sn)
-        # Implement HVAC mode command here (e.g., send HVAC_MODE= command)
+        await self._interface.set_mode(self._sn, hvac_mode)
         self._hvac_mode = hvac_mode
         self.async_write_ha_state()
 
@@ -104,11 +113,9 @@ class AprilaireThermostat(ClimateEntity):
 
         # Get target temperature (e.g., setpoint)
         # Here, you could implement separate commands for reading setpoints if needed
+        self._setpoint_heat_temperature = await self._interface.get_setpoint(self._sn, HVACMode.HEAT)
+        self._setpoint_cool_temperature = await self._interface.get_setpoint(self._sn, HVACMode.COOL)
 
         # Get HVAC mode if available
-        # For now, simulate it as heating if temperature is below a threshold
-        if self._current_temperature is not None and self._target_temperature is not None:
-            if self._current_temperature < self._target_temperature:
-                self._hvac_mode = HVACMode.HEAT
-            else:
-                self._hvac_mode = HVACMode.OFF
+        self._hvac_mode = await self._interface.get_mode(self._sn)
+
