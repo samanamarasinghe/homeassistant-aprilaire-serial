@@ -90,7 +90,7 @@ class AprilaireThermostatSerialInterface:
         # Parse temperature from the response (assuming format is TEMP=XX.X)
         for line in response.split("\n"):
             if "T=" in line:
-                temp = line.split("=")[1].replace("F","")
+                temp = line.split("T=")[1].replace("F","")
                 _LOGGER.info(f"ASI: Temperature for {sn}: {temp}°F")
                 return float(temp)
             else:
@@ -116,11 +116,14 @@ class AprilaireThermostatSerialInterface:
         self.send_command(f"{sn}M?")
         response = await self.read_response()
         # Parse M=<mode>
-        line = response.split("M=")[1]
-        mode = self.mode_convert_from.get(line, None)
-        if mode:
-            return mode
-        _LOGGER.error(f"ASI: Got {line} from {response} for mode for {sn}")
+        if "M=" in response:
+            line = response.split("M=")[1]
+            mode = self.mode_convert_from.get(line, None)
+            if mode:
+                return mode
+            _LOGGER.error(f"ASI: Got {line} from {response} for mode for {sn}")
+        else:
+            _LOGGER.error(f"ASI: no M= in {response} for mode for {sn}")
         return None
     
 
@@ -164,7 +167,7 @@ class AprilaireThermostatSerialInterface:
     async def set_setpoint(self, sn, setpoint_type, value):
         """Set the temperature setpoint (heat or cool) for a specific thermostat."""
         if setpoint_type not in [HVACMode.HEAT,  HVACMode.COOL]:
-            _LOGGER.error("ASI: Invalid setpoint type {setpoint_type}")
+            _LOGGER.error(f"ASI: Invalid setpoint type {setpoint_type}")
             return
 
         if setpoint_type == HVACMode.HEAT:
