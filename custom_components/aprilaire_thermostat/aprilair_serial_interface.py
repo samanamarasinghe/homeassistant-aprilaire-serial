@@ -85,10 +85,12 @@ class AprilaireThermostatSerialInterface:
         response = await self.read_response()
         # Parse temperature from the response (assuming format is TEMP=XX.X)
         for line in response.split("\n"):
-            if line.startswith("TEMP="):
-                temp = line.split("=")[1]
+            if line.startswith("T="):
+                temp = line.split("=")[1].replace("F","")
                 _LOGGER.info(f"ASI: Temperature for {sn}: {temp}°F")
                 return float(temp)
+            else:
+                _LOGGER.error(f"ASI: For temprature got {line}")
         _LOGGER.error(f"ASI: No temperature data received for {sn}.")
         return None
 
