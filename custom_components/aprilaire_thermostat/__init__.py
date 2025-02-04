@@ -1,20 +1,18 @@
 import logging
-
-# Import necessary Home Assistant components
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_PORT, CONF_BAUDRATE
 from homeassistant.core import HomeAssistant
+from homeassistant.const import CONF_PORT, CONF_BAUDRATE
+from homeassistant.exceptions import ConfigEntryNotReady
+from homeassistant.helpers import discovery
 
-
-# Define constants
-DOMAIN = "aprilaire_thermostat"
+from .const import DOMAIN
 
 _LOGGER = logging.getLogger(__name__)
 
 async def async_setup(hass: HomeAssistant, config: dict):
     """Set up Aprilaire thermostat integration from YAML."""
     _LOGGER.info("Setting up Aprilaire thermostat from YAML (if applicable)")
-    # If you don't support YAML config, you can skip this function
+    # If no YAML setup is needed, return True without any further logic
     return True
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry):
@@ -25,7 +23,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry):
     port = entry.data[CONF_PORT]
     baudrate = entry.data.get(CONF_BAUDRATE, 9600)
 
-    # Initialize and manage the serial connection (example)
+    # Initialize and manage the serial connection
     try:
         from serial import Serial
         serial_connection = Serial(port, baudrate, timeout=1)
@@ -33,18 +31,21 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry):
         # Test the connection with a simple command (e.g., SN? for all addresses)
         serial_connection.write(b"SN?\r")
         response = serial_connection.read(100).decode('utf-8')
+        if not response:
+            raise ConfigEntryNotReady("No response from Aprilaire device")
+
         _LOGGER.info(f"Received response: {response}")
-        
-        # You might want to store the serial connection for further use
+
+        # Store the serial connection for use by other components
         hass.data.setdefault(DOMAIN, {})
         hass.data[DOMAIN]["serial_connection"] = serial_connection
 
     except Exception as e:
         _LOGGER.error(f"Failed to set up serial connection: {e}")
-        return False
+        raise ConfigEntryNotReady from e
 
     # Register platforms (e.g., climate) to create entities
-    hass.config_entries.async_setup_platforms(entry, ["climate"])
+    await hass.config_entries.async_forward_entry_setups(entry, ["climate"])
 
     return True
 
