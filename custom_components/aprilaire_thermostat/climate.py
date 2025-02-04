@@ -105,13 +105,22 @@ class AprilaireThermostat(ClimateEntity):
         _LOGGER.debug("Updating Aprilaire thermostat %s", self._sn)
 
         # Get current temperature
-        self._current_temperature = await self._interface.get_temperature(self._sn)
+        tt = await self._interface.get_temperature(self._sn)
+        if tt:
+            self._current_temperature = tt 
 
         # Get target temperature (e.g., setpoint)
         # Here, you could implement separate commands for reading setpoints if needed
-        self._setpoint_heat_temperature = await self._interface.get_setpoint(self._sn, HVACMode.HEAT)
-        self._setpoint_cool_temperature = await self._interface.get_setpoint(self._sn, HVACMode.COOL)
+        sht = await self._interface.get_setpoint(self._sn, HVACMode.HEAT)
+        sct = await self._interface.get_setpoint(self._sn, HVACMode.COOL)
+
+        if sht:
+            self._setpoint_heat_temperature = sht
+        if sct:
+            self._setpoint_cool_temperature = sct
 
         # Get HVAC mode if available
-        self._hvac_mode = await self._interface.get_mode(self._sn)
+        md = await self._interface.get_mode(self._sn)
+        if md:
+            self._hvac_mode = md
 
