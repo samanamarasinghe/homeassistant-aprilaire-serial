@@ -3,10 +3,12 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.const import CONF_PORT
 from homeassistant.exceptions import ConfigEntryNotReady
-
 from .const import DOMAIN, CONF_BAUDRATE
 
 _LOGGER = logging.getLogger(__name__)
+
+# Pre-import platform modules to avoid blocking during async setup
+PLATFORMS = ["climate"]
 
 async def async_setup(hass: HomeAssistant, config: dict):
     """Set up Aprilaire thermostat integration from YAML."""
@@ -33,9 +35,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry):
         _LOGGER.error(f"Failed to set up serial connection: {e}")
         raise ConfigEntryNotReady from e
 
-    hass.async_create_task(
-        hass.config_entries.async_forward_entry_setup(entry, "climate")
-    )
+    # Use the updated method to forward platform setups
+    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+
     return True
 
 async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry):
@@ -46,7 +48,7 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry):
     if serial_connection:
         serial_connection.close()
 
-    unload_ok = await hass.config_entries.async_unload_platforms(entry, ["climate"])
+    unload_ok = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
 
     if unload_ok:
         hass.data.pop(DOMAIN)
