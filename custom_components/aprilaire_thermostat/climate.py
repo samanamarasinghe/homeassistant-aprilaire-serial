@@ -86,7 +86,15 @@ class AprilaireThermostat(ClimateEntity):
         if ATTR_TEMPERATURE in kwargs:
             target_temp = kwargs[ATTR_TEMPERATURE]
             _LOGGER.info("Setting target temperature to %s°F for %s", target_temp, self._sn)
-            await self._interface.set_setpoint(self._sn, "SETPOINTHEAT", target_temp)
+            # cool setupoint cannot be lower than heat setpoint.
+            if self._hvac_mode == HVACMode.COOL and target_temp > self._setpoint_heat_temperature:
+                await self._interface.set_setpoint(self._sn, HVACMode.COOL, target_temp)
+                self._setpoint_cool_temperature = target_temp
+            elif self._hvac_mode == HVACMode.HEAT and target_temp < self._setpoint_cool_temperature:
+                await self._interface.set_setpoint(self._sn, HVACMode.HEAT, target_temp)
+                self._setpoint_heat_temperature = target_temp
+            else:
+                _LOGGER.error(f"Cannot set setpoint when mode is {self._hvac_mode} or not {self._setpoint_heat_temperature} < {target_temp} < {self._setpoint_cool_temperature}")
             self._target_temperature = target_temp
             self.async_write_ha_state()
 
