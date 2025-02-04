@@ -171,9 +171,9 @@ class AprilaireThermostatSerialInterface:
             return
 
         if setpoint_type == HVACMode.HEAT:
-            self.send_command(f"{sn}SH={value}")
+            self.send_command(f"{sn}SH={int(value)}")
         elif setpoint_type == HVACMode.COOL:
-            self.send_command(f"{sn}SC={value}")
+            self.send_command(f"{sn}SC={int(value)}")
         else:
             _LOGGER.error(f"ASI: Invalid Setpoint type {setpoint_type}")
         response = await self.read_response()
