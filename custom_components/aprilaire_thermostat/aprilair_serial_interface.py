@@ -74,7 +74,7 @@ class AprilaireThermostatSerialInterface:
     async def query_thermostats(self):
         """Query all connected thermostats."""
         self.send_command("SN?#")
-        response = self.read_response()
+        response = await self.read_response()
         thermostats = [line for line in response.split("\n") if line.startswith("SN")]
         print(f"Thermostats found: {thermostats}")
         return thermostats
@@ -82,7 +82,7 @@ class AprilaireThermostatSerialInterface:
     async def get_temperature(self, sn):
         """Get the current temperature for a specific thermostat."""
         self.send_command(f"{sn} TEMP?")
-        response = self.read_response()
+        response = await self.read_response()
         # Parse temperature from the response (assuming format is TEMP=XX.X)
         for line in response.split("\n"):
             if line.startswith("TEMP="):
@@ -99,7 +99,7 @@ class AprilaireThermostatSerialInterface:
             return
 
         self.send_command(f"{sn} {setpoint_type}={value}")
-        response = self.read_response()
+        response = await self.read_response()
         if "OK" in response:
             print(f"Setpoint updated successfully for {sn}.")
         else:

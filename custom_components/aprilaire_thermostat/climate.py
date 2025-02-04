@@ -81,7 +81,7 @@ class AprilaireThermostat(ClimateEntity):
             target_temp = kwargs[ATTR_TEMPERATURE]
             _LOGGER.info("Setting target temperature to %s°F for %s", target_temp, self._sn)
             await self._interface.set_setpoint(self._sn, "SETPOINTHEAT", target_temp)
-            await self._target_temperature = target_temp
+            self._target_temperature = target_temp
             self.async_write_ha_state()
 
     async def async_set_hvac_mode(self, hvac_mode):
@@ -100,7 +100,7 @@ class AprilaireThermostat(ClimateEntity):
         _LOGGER.debug("Updating Aprilaire thermostat %s", self._sn)
 
         # Get current temperature
-        await self._current_temperature = self._interface.get_temperature(self._sn)
+        self._current_temperature = await self._interface.get_temperature(self._sn)
 
         # Get target temperature (e.g., setpoint)
         # Here, you could implement separate commands for reading setpoints if needed
