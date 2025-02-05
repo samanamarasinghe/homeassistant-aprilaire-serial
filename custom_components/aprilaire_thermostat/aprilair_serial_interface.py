@@ -174,7 +174,10 @@ class AprilaireThermostatSerialInterface:
             if "SC=" in line or "SH=" in line:
                 temp = line.split("=")[1].replace("F","")
                 _LOGGER.info(f"ASI: Setpoint {setpoint_type} for {sn}: {temp}°F")
-                return float(temp)
+                try:
+                    return float(temp)
+                except:
+                    _LOGGER.error(f"ASI: {temp} connot be made a temprature")
             else:
                 _LOGGER.error(f"ASI: For setpoint temprature got {line} from {response}")
         _LOGGER.error(f"ASI: No setpoint temperature data received for {sn} ({setpoint_type}).")
