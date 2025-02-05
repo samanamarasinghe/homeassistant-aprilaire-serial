@@ -34,6 +34,8 @@ class AprilaireThermostatConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 {
                     vol.Required("port", default="/dev/ttyUSB0"): str,
                     vol.Required("baudrate", default=9600): int,
+                    vol.Required("polling_interval", default=60): int, 
+                    vol.Required("bidrectional", default=False): bool, 
                 }
             ),
             errors=errors,

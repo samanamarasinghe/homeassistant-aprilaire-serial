@@ -11,7 +11,7 @@ from homeassistant.components.climate.const import (
 _LOGGER = logging.getLogger(__name__)
 
 class AprilaireThermostatSerialInterface:
-    def __init__(self, port="/dev/ttyUSB2", baudrate=9600):
+    def __init__(self, port="/dev/ttyUSB0", baudrate=9600):
         try:
             self.ser = serial.Serial(
                 port=port,
@@ -19,11 +19,11 @@ class AprilaireThermostatSerialInterface:
                 bytesize=serial.EIGHTBITS,
                 parity=serial.PARITY_NONE,
                 stopbits=serial.STOPBITS_ONE,
-                timeout=1,
+                timeout=5,
                 xonxoff=False,
                 rtscts=False
             )
-            
+
             print("Serial connection established.")
         except serial.SerialException as e:
             _LOGGER.error(f"ASI: Failed to initialize serial connection: {e}")
@@ -53,7 +53,7 @@ class AprilaireThermostatSerialInterface:
 
         while time.time() - start_time < timeout:
             try:
-                data = self.ser.read(50).decode('utf-8', errors='replace')
+                data = self.ser.read(100).decode('utf-8', errors='replace')
                 if data:
                     response_buffer += data
                     last_data_time = time.time()
@@ -65,14 +65,14 @@ class AprilaireThermostatSerialInterface:
                             _LOGGER.info(f"ASI: Received Line: {line}")
                             output_buffer += line + "\n"
                 else:
-                    if time.time() - last_data_time > 0.5:
+                    if time.time() - last_data_time > 1:
                         break
 
             except serial.SerialException as e:
                 _LOGGER.error(f"ASI: Serial error: {e}")
                 break
 
-            await asyncio.sleep(0.05)
+            await asyncio.sleep(0.1)
 
         return output_buffer.strip()
 

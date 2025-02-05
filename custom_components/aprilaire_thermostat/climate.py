@@ -15,7 +15,9 @@ SUPPORTED_HVAC_MODES = [HVACMode.OFF, HVACMode.HEAT, HVACMode.COOL, HVACMode.AUT
 
 async def async_setup_entry(hass, config_entry, async_add_entities):
     """Setup climate entities for Aprilaire thermostats."""
-    interface = AprilaireThermostatSerialInterface()
+    port = config_entry.data.get("port", "/dev/ttyUSB0")
+    baudrate = config_entry.data.get("baudrate", 9600)
+    interface = AprilaireThermostatSerialInterface(port, baudrate)
     (thermostats, names) = await interface.query_thermostats()
 
     if not thermostats:
@@ -23,9 +25,9 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
         interface.close()
         return
     
-    _LOGGER.error(f"Setting up Thermostats:{thermostats}, with names:")
+    _LOGGER.error(f"From {port}:{baudrate} setting up Thermostats:{thermostats}, with names: {names}")
 
-    entities = [AprilaireThermostat(interface, sn, nm) for sn, nm in zip(thermostats, names)]
+    entities = [AprilaireThermostat(interface, sn, nm, config_entry) for sn, nm in zip(thermostats, names)]
     async_add_entities(entities)
 
     _LOGGER.info("Aprilaire climate entities added successfully.")
@@ -33,7 +35,7 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
 class AprilaireThermostat(ClimateEntity):
     """Representation of an Aprilaire thermostat."""
 
-    def __init__(self, interface, sn, nm):
+    def __init__(self, interface, sn, nm, config):
         """Initialize the thermostat entity."""
         self._interface = interface
         self._sn = sn
@@ -43,6 +45,9 @@ class AprilaireThermostat(ClimateEntity):
         self._setpoint_heat_temperature = None
         self._hvac_mode = HVACMode.OFF
         self._preset_mode = None
+        self._polling_interval = config.data.get("polling_interval", 60) 
+        self._bidrectional = config.data.get("bidirectional", False) 
+        self._last_update = 0
 
     @property
     def name(self):
@@ -116,6 +121,14 @@ class AprilaireThermostat(ClimateEntity):
         self.async_write_ha_state()
 
     async def async_update(self):
+
+        # Check if it's time to poll the thermostat
+        current_time = time.time()
+        if current_time - self._last_update < self._polling_interval:
+            return  # Skip update if polling interval hasn't passed
+        
+        self._last_update = current_time
+
         """Fetch new data from the Aprilaire thermostat."""
         _LOGGER.debug("Updating Aprilaire thermostat %s", self._sn)
 
@@ -124,18 +137,18 @@ class AprilaireThermostat(ClimateEntity):
         if tt:
             self._current_temperature = tt 
 
-        # Get target temperature (e.g., setpoint)
-        # Here, you could implement separate commands for reading setpoints if needed
-        sht = await self._interface.get_setpoint(self._sn, HVACMode.HEAT)
-        sct = await self._interface.get_setpoint(self._sn, HVACMode.COOL)
+        if self._bidrectional:
+            # Get target temperature (e.g., setpoint)
+            # Here, you could implement separate commands for reading setpoints if needed
+            sht = await self._interface.get_setpoint(self._sn, HVACMode.HEAT)
+            sct = await self._interface.get_setpoint(self._sn, HVACMode.COOL)
+            if sht:
+                self._setpoint_heat_temperature = sht
+            if sct:
+                self._setpoint_cool_temperature = sct
 
-        if sht:
-            self._setpoint_heat_temperature = sht
-        if sct:
-            self._setpoint_cool_temperature = sct
-
-        # Get HVAC mode if available
-        md = await self._interface.get_mode(self._sn)
-        if md:
-            self._hvac_mode = md
+            # Get HVAC mode if available
+            md = await self._interface.get_mode(self._sn)
+            if md:
+                self._hvac_mode = md
 
