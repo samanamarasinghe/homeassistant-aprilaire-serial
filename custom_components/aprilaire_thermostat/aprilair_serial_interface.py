@@ -170,6 +170,15 @@ class AprilaireThermostatSerialInterface:
         if "F=" not in response2:
             _LOGGER.error(f"ASI: Fan mode set {sn} for {inmode}, got back {response2}.")
 
+    async def set_fan(self, onauto):
+        if onauto:
+            response = await self.command_response(f"{sn}F=ON")
+        else:
+            response = await self.command_response(f"{sn}F=A")
+        if "F=" not in response:
+            _LOGGER.error(f"ASI: Fan mode set {sn} for {onauto}, got back {response}.")
+
+
     async def get_setpoint(self, sn, setpoint_type):
         """Get the current temperature for a specific thermostat."""
         if setpoint_type == HVACMode.HEAT:

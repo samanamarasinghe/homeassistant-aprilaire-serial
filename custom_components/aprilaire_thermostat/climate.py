@@ -3,6 +3,8 @@ from homeassistant.components.climate.const import (
     ClimateEntityFeature,
     HVACMode,
     HVACAction,
+    FAN_AUTO,
+    FAN_ON,
 )
 from homeassistant.util.unit_system import UnitOfTemperature
 import logging
@@ -128,12 +130,30 @@ class AprilaireThermostat(ClimateEntity):
     @property
     def supported_features(self):
         """Return the features supported by this thermostat."""
-        return ClimateEntityFeature.TARGET_TEMPERATURE
+        return [ClimateEntityFeature.TARGET_TEMPERATURE, ClimateEntityFeature.FAN_MODE, 
+                ClimateEntityFeature.TURN_OFF, ClimateEntityFeature.TURN_ON]
 
     @property
     def hvac_modes(self):
         """Return the list of available HVAC modes."""
         return SUPPORTED_HVAC_MODES
+    
+    @property
+    def fan_modes(self):
+        return [FAN_ON, FAN_AUTO]
+    
+    @property
+    def fan_mode(self):
+        if self._hvac_mode == HVACMode.FAN_ONLY:
+            return FAN_ON
+        else:
+            return FAN_AUTO
+        
+    async def async_set_fan_mode(self, fan_mode):
+        if fan_mode == FAN_ON:
+            await self._interface.set_fan(True)
+        else:
+            await self._interface.set_fan(False)
 
     async def async_set_temperature(self, **kwargs):
         """Set the target temperature for the thermostat."""
@@ -162,12 +182,14 @@ class AprilaireThermostat(ClimateEntity):
         if mode not in SUPPORTED_HVAC_MODES:
             _LOGGER.error("Unsupported HVAC mode: %s", mode)
             return
-        
         self._hvac_mode = mode
         await self._interface.set_mode(self._sn, mode)
         self.async_write_ha_state()
 
     def state2action(self, state):
+        # the State is G?Y1?W1?Y2?W2?B+O-   ? is either + or -
+        # Assuming G is for the fan, W1 for 1st stage heat (W2 for 2nd stage?)
+        # Y1 is for cool (Y2?)  Not sure what B and O are (B s always seems to be + and O -)
         try:
             if state[state.find("W1")+2] == "+":
                 if state[state.find("G")+1] == "+":
@@ -200,6 +222,10 @@ class AprilaireThermostat(ClimateEntity):
         st = await self._interface.get_state(self._sn)
         if st:
             self._hvac_action = self.state2action(st)
+
+        #Name will not change, so get it once.
+        if self._firsttime:
+            self._name = await self._interface.get_name(self._sn)
 
         if self._bidrectional or self._firsttime:
             # Need to get what is on the thermostats after initialization
