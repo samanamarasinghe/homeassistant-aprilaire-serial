@@ -12,7 +12,7 @@ from .const import ATTR_TEMPERATURE
 from homeassistant.util import Throttle
 from datetime import timedelta
 
-MIN_TIME_BETWEEN_UPDATES = timedelta(seconds=30)
+MIN_TIME_BETWEEN_UPDATES = timedelta(seconds=60)
 
 
 _LOGGER = logging.getLogger(__name__)

@@ -46,33 +46,25 @@ class AprilaireThermostatSerialInterface:
             _LOGGER.info("ASI: Serial connection is not available.")
             return ""
 
-        response_buffer = ""
         output_buffer = ""
-        start_time = time.time()
-        last_data_time = time.time()
-
-        while time.time() - start_time < timeout:
+        done = False
+        while not done:
             try:
-                data = self.ser.read(100).decode('utf-8', errors='replace')
-                if data:
-                    response_buffer += data
-                    last_data_time = time.time()
-
+                done = True
+                response_buffer = self.ser.read(400).decode('utf-8', errors='replace')
+                if response_buffer:
                     while '\r' in response_buffer:
                         line, response_buffer = response_buffer.split('\r', 1)
                         line = line.strip()
                         if line:
-                            _LOGGER.info(f"ASI: Received Line: {line}")
                             output_buffer += line + "\n"
-                else:
-                    if time.time() - last_data_time > 1:
-                        break
 
             except serial.SerialException as e:
                 _LOGGER.error(f"ASI: Serial error: {e}")
-                break
-
-            await asyncio.sleep(0.1)
+                if timeout > 0:
+                    timeout -= 1
+                    await asyncio.sleep(0.1)
+                    done = False
 
         return output_buffer.strip()
 
@@ -108,6 +100,24 @@ class AprilaireThermostatSerialInterface:
         _LOGGER.error(f"ASI: No temperature data received for {sn}.")
         return None
     
+    async def get_name(self, sn):
+        self.send_command(f"{sn}NAME?")
+        response = await self.read_response()
+        
+        if response:
+            return response[3:]  #Skip SN#
+        else:
+            return None
+        
+    async def get_state(self, sn):
+        self.send_command(f"{sn}H?")
+        response = await self.read_response()
+        
+        if response:
+            return response
+        else:
+            return None
+
     mode_convert_to = {
         HVACMode.COOL : "C",
         HVACMode.HEAT : "H",
@@ -116,14 +126,14 @@ class AprilaireThermostatSerialInterface:
         HVACMode.FAN_ONLY : "OFF"  # NO Heat or Cool when Fan only
     }
     mode_convert_ret = {
+        HVACMode.FAN_ONLY: "OFF",  # No Heat or Cool when Fan only First, so will not be left in mode_convert_from
         HVACMode.COOL : "COOL",
         HVACMode.HEAT : "HEAT",
         HVACMode.OFF : "OFF",
         HVACMode.HEAT_COOL: "AUTO",
-        HVACMode.FAN_ONLY: "OFF"  # No Heat or Cool when Fan only
     }
     mode_convert_from = {v: k for k,v in mode_convert_ret.items()}
-
+        
     async def get_mode(self, sn):
         self.send_command(f"{sn}M?")
         response = await self.read_response()
@@ -148,16 +158,6 @@ class AprilaireThermostatSerialInterface:
             _LOGGER.error(f"ASI: no M= in {response} for mode for {sn}")
         return None
     
-    async def get_name(self, sn):
-        self.send_command(f"{sn}NAME?")
-        response = await self.read_response()
-        
-        if response:
-            return response[3:]  #Skip SN#
-        else:
-            return None
-    
-
     async def set_mode(self, sn, inmode):
         """Set the mode for a specific thermostat."""
         mode = self.mode_convert_to.get(inmode, None)  # FAN_ONLY will set this to OFF
@@ -180,15 +180,6 @@ class AprilaireThermostatSerialInterface:
         response2 = await self.read_response()
         # TODO: check for the correct response
         _LOGGER.error(f"ASI: Fan mode set {sn} for {inmode}, got back {response2}.")
-
-    async def get_state(self, sn):
-        self.send_command(f"{sn}H?")
-        response = await self.read_response()
-        
-        if response:
-            return response
-        else:
-            return None
 
     async def get_setpoint(self, sn, setpoint_type):
         """Get the current temperature for a specific thermostat."""
