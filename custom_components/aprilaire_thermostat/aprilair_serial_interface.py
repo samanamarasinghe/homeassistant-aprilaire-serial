@@ -2,6 +2,7 @@ import serial
 import time
 import logging
 import asyncio
+from serial_asyncio import open_serial_connection
 
 from homeassistant.components.climate.const import (
     ClimateEntityFeature,
@@ -12,66 +13,59 @@ _LOGGER = logging.getLogger(__name__)
 
 class AprilaireThermostatSerialInterface:
     def __init__(self, port="/dev/ttyUSB0", baudrate=9600):
+        self.port = port
+        self.baudrate = baudrate
+        self.reader = None
+        self.writer = None
+
+    async def connect(self):
+        """Establish a non-blocking serial connection."""
         try:
-            self.ser = serial.Serial(
-                port=port,
-                baudrate=baudrate,
-                bytesize=serial.EIGHTBITS,
-                parity=serial.PARITY_NONE,
-                stopbits=serial.STOPBITS_ONE,
-                timeout=5,
-                xonxoff=False,
-                rtscts=False
+            self.reader, self.writer = await open_serial_connection(
+                url=self.port, baudrate=self.baudrate
             )
+            #_LOGGER.info(f"Serial connection established on {self.port}")
+        except Exception as e:
+            _LOGGER.error(f"Failed to connect to serial device: {e}")
+            raise
 
-            print("Serial connection established.")
-        except serial.SerialException as e:
-            _LOGGER.error(f"ASI: Failed to initialize serial connection: {e}")
-            self.ser = None
-
-    def send_command(self, command):
-        if not self.ser:
-            _LOGGER.error("ASI: Serial connection is not available.")
+    async def send_command(self, command):
+        """Send a command over the serial connection."""
+        if not self.writer:
+            _LOGGER.error("Attempted to send command without an active connection")
             return
-
         try:
-            self.ser.reset_input_buffer()
-            self.ser.write(f"{command}\r".encode('utf-8'))
-            #_LOGGER.info(f"ASI: Command sent: {command}")
-        except serial.SerialException as e:
-            _LOGGER.error(f"ASI: Error sending command: {e}")
+            self.writer.write(f"{command}\r".encode('utf-8'))
+            await self.writer.drain()
+            _LOGGER.debug(f"Command sent: {command}")
+        except Exception as e:
+            _LOGGER.error(f"Error sending command '{command}': {e}")
 
     async def read_response(self, timeout=5):
-        if not self.ser:
-            _LOGGER.error("ASI: Serial connection is not available.")
+        """Read the response asynchronously with a timeout."""
+        if not self.reader:
+            _LOGGER.error("Attempted to read response without an active connection")
             return ""
+        
+        response = ""
+        try:
+            while True:
+                # Wait up to 'timeout' seconds for each read operation
+                data = await asyncio.wait_for(self.reader.read(50), timeout)
+                if not data:
+                    break
+                response += data.decode('utf-8')
+        except asyncio.TimeoutError:
+            _LOGGER.warning("Timeout reached while reading response")
+        except Exception as e:
+            _LOGGER.error(f"Error reading response: {e}")
 
-        output_buffer = ""
-        done = False
-        while not done:
-            try:
-                done = True
-                response_buffer = self.ser.read(400).decode('utf-8', errors='replace')
-                if response_buffer:
-                    while '\r' in response_buffer:
-                        line, response_buffer = response_buffer.split('\r', 1)
-                        line = line.strip()
-                        if line:
-                            output_buffer += line + "\n"
-
-            except serial.SerialException as e:
-                _LOGGER.error(f"ASI: Serial error: {e}")
-                if timeout > 0:
-                    timeout -= 1
-                    await asyncio.sleep(0.1)
-                    done = False
-
-        return output_buffer.strip()
+        #_LOGGER.debug(f"Response received: {response.strip()}")
+        return response.strip()
 
     async def query_thermostats(self):
         """Query all connected thermostats."""
-        self.send_command("SN?#")
-        await asyncio.sleep(0.5)
+        await self.send_command("SN?#")
         response = await self.read_response()
         thermostats = [line for line in response.split("\n") if line.startswith("SN")]
 
@@ -85,7 +79,7 @@ class AprilaireThermostatSerialInterface:
 
     async def get_temperature(self, sn):
         """Get the current temperature for a specific thermostat."""
-        self.send_command(f"{sn}T?")
+        await self.send_command(f"{sn}T?")
         response = await self.read_response()
         # Parse temperature from the response (assuming format is TEMP=XX.X)
         for line in response.split("\n"):
@@ -102,7 +96,7 @@ class AprilaireThermostatSerialInterface:
         return None
     
     async def get_name(self, sn):
-        self.send_command(f"{sn}NAME?")
+        await self.send_command(f"{sn}NAME?")
         response = await self.read_response()
         
         if response:
@@ -111,7 +105,7 @@ class AprilaireThermostatSerialInterface:
             return None
         
     async def get_state(self, sn):
-        self.send_command(f"{sn}H?")
+        await self.send_command(f"{sn}H?")
         response = await self.read_response()
         
         if response:
@@ -136,7 +130,7 @@ class AprilaireThermostatSerialInterface:
     mode_convert_from = {v: k for k,v in mode_convert_ret.items()}
         
     async def get_mode(self, sn):
-        self.send_command(f"{sn}M?")
+        await self.send_command(f"{sn}M?")
         response = await self.read_response()
         # Parse M=<mode>
         if "M=" in response:
@@ -144,9 +138,9 @@ class AprilaireThermostatSerialInterface:
             mode = self.mode_convert_from.get(line, None)
             if mode:
                 if mode == HVACMode.OFF:  # Check if fan is on
-                    self.send_command(f"{sn}F?")
+                    await self.send_command(f"{sn}F?")
                     response2 = await self.read_response()
-                    line2 = response2.split("=")[1]
+                    line2 = response2.split("F=")[1]
                     if line2 == "A":
                         return mode
                     elif line2 == "ON":
@@ -165,7 +159,7 @@ class AprilaireThermostatSerialInterface:
         if not mode:
             _LOGGER.error(f"ASI: Wrong mode {inmode} given")
 
-        self.send_command(f"{sn}M={mode}")
+        await self.send_command(f"{sn}M={mode}")
 
         response = await self.read_response()
         if self.mode_convert_ret[inmode] in response:
@@ -176,9 +170,9 @@ class AprilaireThermostatSerialInterface:
 
         # Now do the fan setup FAN_ONLY--> ON, rest --> A (Auto)
         if inmode == HVACMode.FAN_ONLY:
-            self.send_command(f"{sn}F=ON")
+            await self.send_command(f"{sn}F=ON")
         else:
-            self.send_command(f"{sn}F=A")
+            await self.send_command(f"{sn}F=A")
         response2 = await self.read_response()
         if "F=" not in response2:
             _LOGGER.error(f"ASI: Fan mode set {sn} for {inmode}, got back {response2}.")
@@ -186,9 +180,9 @@ class AprilaireThermostatSerialInterface:
     async def get_setpoint(self, sn, setpoint_type):
         """Get the current temperature for a specific thermostat."""
         if setpoint_type == HVACMode.HEAT:
-            self.send_command(f"{sn}SH?")
+            await self.send_command(f"{sn}SH?")
         elif setpoint_type == HVACMode.COOL:
-            self.send_command(f"{sn}SC?")
+            await self.send_command(f"{sn}SC?")
         else:
             _LOGGER.error(f"ASI: Invalid Setpoint type {setpoint_type}")
             return None
@@ -215,9 +209,9 @@ class AprilaireThermostatSerialInterface:
             return
 
         if setpoint_type == HVACMode.HEAT:
-            self.send_command(f"{sn}SH={int(value)}")
+            await self.send_command(f"{sn}SH={int(value)}")
         elif setpoint_type == HVACMode.COOL:
-            self.send_command(f"{sn}SC={int(value)}")
+            await self.send_command(f"{sn}SC={int(value)}")
         else:
             _LOGGER.error(f"ASI: Invalid Setpoint type {setpoint_type}")
         response = await self.read_response()
@@ -228,9 +222,10 @@ class AprilaireThermostatSerialInterface:
             _LOGGER.error(f"ASI: Failed to update setpoint for {sn}, got {response} ({setpoint_type}={value})")
 
     def close(self):
-        if self.ser:
-            self.ser.close()
-            _LOGGER.info("ASI: Serial connection closed.")
+        """Close the serial connection."""
+        if self.writer:
+            self.writer.close()
+            _LOGGER.info("Serial connection closed.")
 
 
 

@@ -4,6 +4,7 @@ from homeassistant.core import HomeAssistant
 from homeassistant.const import CONF_PORT
 from homeassistant.exceptions import ConfigEntryNotReady
 from .const import DOMAIN, CONF_BAUDRATE
+from .aprilair_serial_interface import AprilaireThermostatSerialInterface
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -23,15 +24,14 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry):
     baudrate = entry.data.get(CONF_BAUDRATE, 9600)
 
     try:
-        # Run blocking code in executor to avoid blocking the event loop
-        _LOGGER.info(f"AINI: Starting serial connection to {port} at baud {baudrate}")
-        serial_connection = await hass.async_add_executor_job(setup_serial_connection, port, baudrate)
-        if not serial_connection:
-            raise ConfigEntryNotReady("Unable to establish serial connection")
-        _LOGGER.info(f"AINI: Serial connection seems OK ")
+        # Initialize and connect the interface asynchronously
+        interface = AprilaireThermostatSerialInterface(port, baudrate)
+        await interface.connect()  # Asynchronous connection
 
         hass.data.setdefault(DOMAIN, {})
-        hass.data[DOMAIN]["serial_connection"] = serial_connection
+        hass.data[DOMAIN]["interface"] = interface
+
+        _LOGGER.info("Serial connection established successfully")
 
     except Exception as e:
         _LOGGER.error(f"Failed to set up serial connection: {e}")
@@ -46,9 +46,9 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry):
     """Unload the integration."""
     _LOGGER.info("Unloading Aprilaire thermostat integration")
 
-    serial_connection = hass.data[DOMAIN].get("serial_connection")
-    if serial_connection:
-        serial_connection.close()
+    interface = hass.data[DOMAIN].get("interface")
+    if interface:
+        interface.close()  # Close the serial connection gracefully
 
     unload_ok = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
 
@@ -56,15 +56,3 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry):
         hass.data.pop(DOMAIN)
 
     return unload_ok
-
-def setup_serial_connection(port, baudrate):
-    """Set up the serial connection (blocking)."""
-    from serial import Serial
-    try:
-        serial_connection = Serial(port, baudrate, timeout=1)
-        serial_connection.write(b"SN?\r")
-        response = serial_connection.read(100).decode('utf-8')
-        return serial_connection
-    except Exception as e:
-        _LOGGER.error(f"Error setting up serial connection: {e}")
-        return None
