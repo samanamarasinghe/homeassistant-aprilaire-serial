@@ -23,6 +23,7 @@ class AprilaireThermostatSerialInterface:
                 xonxoff=False,
                 rtscts=False
             )
+            
             print("Serial connection established.")
         except serial.SerialException as e:
             _LOGGER.error(f"ASI: Failed to initialize serial connection: {e}")
