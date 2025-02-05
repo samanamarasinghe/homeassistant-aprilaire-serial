@@ -84,8 +84,8 @@ class AprilaireThermostatSerialInterface:
         for sn in thermostats:
             nm = await self.get_name(sn)
             names.append(nm)
-        _LOGGER.info(f"ASI: Thermostats found: {thermostats}")
-        return thermostats, names
+        _LOGGER.info(f"ASI: Thermostats found: {thermostats} named {names}")
+        return (thermostats, names)
 
     async def get_temperature(self, sn):
         """Get the current temperature for a specific thermostat."""
