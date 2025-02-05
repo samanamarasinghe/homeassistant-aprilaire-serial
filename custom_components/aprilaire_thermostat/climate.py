@@ -2,6 +2,7 @@ from homeassistant.components.climate import ClimateEntity
 from homeassistant.components.climate.const import (
     ClimateEntityFeature,
     HVACMode,
+    HVACAction,
 )
 from homeassistant.util.unit_system import UnitOfTemperature
 import logging
@@ -58,10 +59,11 @@ class AprilaireThermostat(ClimateEntity):
         self._setpoint_cool_temperature = None
         self._setpoint_heat_temperature = None
         self._hvac_mode = HVACMode.OFF
+        self._hvac_action = HVACAction.OFF
         self._preset_mode = None
         self._bidrectional = config.data.get("bidirectional", False) 
         self._firsttime = True
-        self._last_update = 0
+
 
     @property
     def name(self):
@@ -76,22 +78,52 @@ class AprilaireThermostat(ClimateEntity):
     @property
     def current_temperature(self): 
         """Return the current temperature."""
-        return self._current_temperature
+        try:
+            return float(self._current_temperature)
+        except:
+            _LOGGER.error(f": {self._current_temperature} connot be made a temprature")
+        return None
 
     @property
     def target_temperature(self):
         """Return the target temperature."""
         if self._hvac_mode == HVACMode.COOL:
-            return self._setpoint_cool_temperature
+            temp = self._setpoint_cool_temperature
         elif self._hvac_mode == HVACMode.HEAT:
-            return self._setpoint_heat_temperature
+            temp = self._setpoint_heat_temperature
         else:
+            return None
+        try:
+            return float(temp)
+        except:
+            _LOGGER.error(f": {temp} connot be made a temprature")
+            return None
+
+    @property
+    def target_temperature_high(self):
+        try:
+            return float(self._setpoint_heat_temperature)
+        except:
+            _LOGGER.error(f": {self._setpoint_heat_temperature} connot be made a temprature")
+            return None
+
+    @property
+    def target_temperature_low(self) -> float | None:
+        try:
+            return float(self._setpoint_cool_temperature)
+        except:
+            _LOGGER.error(f": {self._setpoint_cool_temperature} connot be made a temprature")
             return None
 
     @property
     def hvac_mode(self): 
         """Return the current HVAC mode."""
         return self._hvac_mode
+    
+    @property
+    def hvac_action(self) -> HVACAction | None:
+        """Return the current running hvac operation if supported."""
+        return self._attr_hvac_action
 
     @property
     def supported_features(self):
@@ -135,6 +167,24 @@ class AprilaireThermostat(ClimateEntity):
         await self._interface.set_mode(self._sn, mode)
         self.async_write_ha_state()
 
+    def state2action(self, state):
+        try:
+            if state[state.find("W1")+2] == "+":
+                if state[state.find("G")+1] == "+":
+                    return HVACAction.HEATING
+                else:
+                    return HVACAction.PREHEATING
+            elif state[state.find("Y1")+2] == "+":
+                return HVACAction.COOLING
+            elif state[state.find("G")+1] == "+":
+                return HVACAction.FAN
+            elif self._hvac_mode == HVACMode.OFF:
+                return HVACAction.OFF
+            else:
+                return HVACAction.IDLE
+        except:
+            _LOGGER.error(f"For {self._sn} could not convert {state} to action ")
+            return None
 
     @Throttle(MIN_TIME_BETWEEN_UPDATES)
     async def async_update(self):
@@ -146,10 +196,10 @@ class AprilaireThermostat(ClimateEntity):
         if tt:
             self._current_temperature = tt 
 
-        #HACK FOR TESTING
+        #Get the current state
         st = await self._interface.get_state(self._sn)
         if st:
-            self._name = st
+            self._hvac_action = self.state2action(st)
 
         if self._bidrectional or self._firsttime:
             # Need to get what is on the thermostats after initialization
