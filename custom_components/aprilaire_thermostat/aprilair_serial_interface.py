@@ -17,6 +17,7 @@ class AprilaireThermostatSerialInterface:
         self.baudrate = baudrate
         self.reader = None
         self.writer = None
+        self._read_lock = asyncio.Lock()  # Async lock to prevent concurrent reads
 
     async def connect(self):
         """Establish a non-blocking serial connection."""
@@ -42,26 +43,26 @@ class AprilaireThermostatSerialInterface:
             _LOGGER.error(f"Error sending command '{command}': {e}")
 
     async def read_response(self, timeout=5):
-        """Read the response asynchronously with a timeout."""
-        if not self.reader:
-            _LOGGER.error("Attempted to read response without an active connection")
-            return ""
-        
-        response = ""
-        try:
-            while True:
-                # Wait up to 'timeout' seconds for each read operation
-                data = await asyncio.wait_for(self.reader.read(50), timeout)
-                if not data:
-                    break
-                response += data.decode('utf-8')
-        except asyncio.TimeoutError:
-            _LOGGER.warning("Timeout reached while reading response")
-        except Exception as e:
-            _LOGGER.error(f"Error reading response: {e}")
+        """Read the response asynchronously with a timeout and lock."""
+        async with self._read_lock:  # Lock to prevent multiple concurrent reads
+            if not self.reader:
+                _LOGGER.error("Attempted to read response without an active connection")
+                return ""
+            
+            response = ""
+            try:
+                while True:
+                    # Wait up to 'timeout' seconds for each read operation
+                    data = await asyncio.wait_for(self.reader.read(50), timeout)
+                    if not data:
+                        break
+                    response += data.decode('utf-8')
+            except asyncio.TimeoutError:
+                _LOGGER.warning("Timeout reached while reading response")
+            except Exception as e:
+                _LOGGER.error(f"Error reading response: {e}")
 
-        #_LOGGER.debug(f"Response received: {response.strip()}")
-        return response.strip()
+            return response.strip()
 
     async def query_thermostats(self):
         """Query all connected thermostats."""
