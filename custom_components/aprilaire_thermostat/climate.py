@@ -27,7 +27,7 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
         interface.close()
         return
     
-    _LOGGER.error(f"From {port}:{baudrate} setting up Thermostats:{thermostats}, with names: {names}")
+    _LOGGER.error(f"Using {port}:{baudrate} setting up Thermostats:{thermostats}, with names: {names}")
 
     entities = [AprilaireThermostat(interface, sn, nm, config_entry) for sn, nm in zip(thermostats, names)]
     async_add_entities(entities)
@@ -139,6 +139,11 @@ class AprilaireThermostat(ClimateEntity):
         tt = await self._interface.get_temperature(self._sn)
         if tt:
             self._current_temperature = tt 
+
+        #HACK FOR TESTING
+        st = await self._interface.get_state(self._sn)
+        if st:
+            self._name = st
 
         if self._bidrectional or self._firsttime:
             # Need to get what is on the thermostats after initialization
