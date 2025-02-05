@@ -153,7 +153,7 @@ class AprilaireThermostatSerialInterface:
         response = await self.read_response()
         
         if response:
-            return response
+            return response[3:]  #Skip SN#
         else:
             return None
     
