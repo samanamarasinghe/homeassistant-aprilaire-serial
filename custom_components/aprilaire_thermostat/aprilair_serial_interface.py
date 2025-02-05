@@ -11,7 +11,7 @@ from homeassistant.components.climate.const import (
 _LOGGER = logging.getLogger(__name__)
 
 class AprilaireThermostatSerialInterface:
-    def __init__(self, port="/dev/ttyUSB0", baudrate=9600):
+    def __init__(self, port="/dev/ttyUSB2", baudrate=9600):
         try:
             self.ser = serial.Serial(
                 port=port,
