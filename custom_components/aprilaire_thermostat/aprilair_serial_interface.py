@@ -40,7 +40,7 @@ class AprilaireThermostatSerialInterface:
         except serial.SerialException as e:
             _LOGGER.error(f"ASI: Error sending command: {e}")
 
-    async def read_response(self, timeout=5):
+    async def read_response(self, timeout=1):
         if not self.ser:
             _LOGGER.info("ASI: Serial connection is not available.")
             return ""
@@ -64,7 +64,7 @@ class AprilaireThermostatSerialInterface:
                             _LOGGER.info(f"ASI: Received Line: {line}")
                             output_buffer += line + "\n"
                 else:
-                    if time.time() - last_data_time > 0.5:
+                    if time.time() - last_data_time > 0.1:
                         break
 
             except serial.SerialException as e:
@@ -96,7 +96,10 @@ class AprilaireThermostatSerialInterface:
             if "T=" in line:
                 temp = line.split("T=")[1].replace("F","")
                 _LOGGER.info(f"ASI: Temperature for {sn}: {temp}°F")
-                return float(temp)
+                if isinstance(temp, int):
+                    return float(temp)
+                else:
+                    _LOGGER.error(f"ASI: {temp} is not a valid temprature")
             else:
                 _LOGGER.error(f"ASI: For temprature got {line} from {response}")
         _LOGGER.error(f"ASI: No temperature data received for {sn}.")
@@ -133,7 +136,7 @@ class AprilaireThermostatSerialInterface:
     async def get_name(self, sn):
         self.send_command(f"{sn}NAME?")
         response = await self.read_response()
-        # Parse M=<mode>
+        
         if response:
             return response
         else:
