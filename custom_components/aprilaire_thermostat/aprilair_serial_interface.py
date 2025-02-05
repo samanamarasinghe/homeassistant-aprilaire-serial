@@ -40,7 +40,7 @@ class AprilaireThermostatSerialInterface:
         except serial.SerialException as e:
             _LOGGER.error(f"ASI: Error sending command: {e}")
 
-    async def read_response(self, timeout=1):
+    async def read_response(self, timeout=5):
         if not self.ser:
             _LOGGER.info("ASI: Serial connection is not available.")
             return ""
@@ -64,7 +64,7 @@ class AprilaireThermostatSerialInterface:
                             _LOGGER.info(f"ASI: Received Line: {line}")
                             output_buffer += line + "\n"
                 else:
-                    if time.time() - last_data_time > 0.1:
+                    if time.time() - last_data_time > 0.5:
                         break
 
             except serial.SerialException as e:
@@ -80,6 +80,8 @@ class AprilaireThermostatSerialInterface:
         self.send_command("SN?#")
         response = await self.read_response()
         thermostats = [line for line in response.split("\n") if line.startswith("SN")]
+
+        await asyncio.sleep(0.5)
         names = []
         for sn in thermostats:
             nm = await self.get_name(sn)
