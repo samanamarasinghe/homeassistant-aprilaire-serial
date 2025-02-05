@@ -140,8 +140,8 @@ class AprilaireThermostat(ClimateEntity):
             self._current_temperature = tt 
 
         if self._bidrectional or self._firsttime:
-            # Need to get what is in the thermostats after initialization
-            self._firsttime = False
+            # Need to get what is on the thermostats after initialization
+            self._firsttime = False 
 
             # Get target temperature (e.g., setpoint)
             # Here, you could implement separate commands for reading setpoints if needed
