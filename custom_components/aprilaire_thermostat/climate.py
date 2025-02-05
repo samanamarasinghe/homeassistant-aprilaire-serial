@@ -5,6 +5,7 @@ from homeassistant.components.climate.const import (
 )
 from homeassistant.util.unit_system import UnitOfTemperature
 import logging
+import time
 from .aprilair_serial_interface import AprilaireThermostatSerialInterface
 from .const import ATTR_TEMPERATURE
 
@@ -131,7 +132,7 @@ class AprilaireThermostat(ClimateEntity):
         self._last_update = current_time
 
         """Fetch new data from the Aprilaire thermostat."""
-        _LOGGER.debug("Updating Aprilaire thermostat %s", self._sn)
+        _LOGGER.debug(f"Updating Aprilaire thermostat {self._sn} at {current_time} ")
 
         # Get current temperature
         tt = await self._interface.get_temperature(self._sn)
