@@ -53,7 +53,6 @@ class AprilaireThermostat(ClimateEntity):
         self._preset_mode = None
         self._polling_interval = config.data.get("polling_interval", 60) + random.randint(0, 10) # so all don't go at the same time
         self._bidrectional = config.data.get("bidirectional", False) 
-        self._last_update = 0
         self._firsttime = True
 
     @property
@@ -130,16 +129,8 @@ class AprilaireThermostat(ClimateEntity):
 
     @Throttle(MIN_TIME_BETWEEN_UPDATES)
     async def async_update(self):
-
-        # Check if it's time to poll the thermostat
-        current_time = time.time()
-        if current_time - self._last_update < self._polling_interval:
-            return  # Skip update if polling interval hasn't passed
-        
-        self._last_update = current_time
-
         """Fetch new data from the Aprilaire thermostat."""
-        _LOGGER.debug(f"Updating Aprilaire thermostat {self._sn} at {current_time} ")
+        #_LOGGER.debug(f"Updating Aprilaire thermostat {self._sn} ")
 
         # Get current temperature
         tt = await self._interface.get_temperature(self._sn)

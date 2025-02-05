@@ -37,13 +37,13 @@ class AprilaireThermostatSerialInterface:
         try:
             self.ser.reset_input_buffer()
             self.ser.write(f"{command}\r".encode('utf-8'))
-            _LOGGER.info(f"ASI: Command sent: {command}")
+            #_LOGGER.info(f"ASI: Command sent: {command}")
         except serial.SerialException as e:
             _LOGGER.error(f"ASI: Error sending command: {e}")
 
     async def read_response(self, timeout=5):
         if not self.ser:
-            _LOGGER.info("ASI: Serial connection is not available.")
+            _LOGGER.error("ASI: Serial connection is not available.")
             return ""
 
         output_buffer = ""
@@ -71,6 +71,7 @@ class AprilaireThermostatSerialInterface:
     async def query_thermostats(self):
         """Query all connected thermostats."""
         self.send_command("SN?#")
+        await asyncio.sleep(0.5)
         response = await self.read_response()
         thermostats = [line for line in response.split("\n") if line.startswith("SN")]
 
@@ -79,7 +80,7 @@ class AprilaireThermostatSerialInterface:
         for sn in thermostats:
             nm = await self.get_name(sn)
             names.append(nm)
-        _LOGGER.info(f"ASI: Thermostats found: {thermostats} named {names}")
+        #_LOGGER.info(f"ASI: Thermostats found: {thermostats} named {names}")
         return (thermostats, names)
 
     async def get_temperature(self, sn):
@@ -90,7 +91,7 @@ class AprilaireThermostatSerialInterface:
         for line in response.split("\n"):
             if "T=" in line:
                 temp = line.split("T=")[1].replace("F","")
-                _LOGGER.info(f"ASI: Temperature for {sn}: {temp}°F")
+                #_LOGGER.info(f"ASI: Temperature for {sn}: {temp}°F")
                 try:
                     return float(temp)
                 except:
@@ -168,7 +169,8 @@ class AprilaireThermostatSerialInterface:
 
         response = await self.read_response()
         if self.mode_convert_ret[inmode] in response:
-            _LOGGER.info(f"ASI: Mode updated successfully for {sn} to {inmode}.")
+            #_LOGGER.info(f"ASI: Mode updated successfully for {sn} to {inmode}.")
+            None
         else:
             _LOGGER.error(f"ASI: Failed to update mode for {sn}, Got {response}.")
 
@@ -178,8 +180,8 @@ class AprilaireThermostatSerialInterface:
         else:
             self.send_command(f"{sn}F=A")
         response2 = await self.read_response()
-        # TODO: check for the correct response
-        _LOGGER.error(f"ASI: Fan mode set {sn} for {inmode}, got back {response2}.")
+        if "F=" not in response2:
+            _LOGGER.error(f"ASI: Fan mode set {sn} for {inmode}, got back {response2}.")
 
     async def get_setpoint(self, sn, setpoint_type):
         """Get the current temperature for a specific thermostat."""
@@ -196,7 +198,7 @@ class AprilaireThermostatSerialInterface:
         for line in response.split("\n"):
             if "SC=" in line or "SH=" in line:
                 temp = line.split("=")[1].replace("F","")
-                _LOGGER.info(f"ASI: Setpoint {setpoint_type} for {sn}: {temp}°F")
+                #_LOGGER.info(f"ASI: Setpoint {setpoint_type} for {sn}: {temp}°F")
                 try:
                     return float(temp)
                 except:
@@ -220,7 +222,8 @@ class AprilaireThermostatSerialInterface:
             _LOGGER.error(f"ASI: Invalid Setpoint type {setpoint_type}")
         response = await self.read_response()
         if int(value) in response:
-            _LOGGER.info(f"ASI: Setpoint updated successfully for {sn}.")
+            #_LOGGER.info(f"ASI: Setpoint updated successfully for {sn}.")
+            None
         else:
             _LOGGER.error(f"ASI: Failed to update setpoint for {sn}, got {response} ({setpoint_type}={value})")
 
