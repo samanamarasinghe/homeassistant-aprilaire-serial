@@ -96,9 +96,9 @@ class AprilaireThermostatSerialInterface:
             if "T=" in line:
                 temp = line.split("T=")[1].replace("F","")
                 _LOGGER.info(f"ASI: Temperature for {sn}: {temp}°F")
-                if isinstance(temp, int):
+                try:
                     return float(temp)
-                else:
+                except:
                     _LOGGER.error(f"ASI: {temp} is not a valid temprature")
             else:
                 _LOGGER.error(f"ASI: For temprature got {line} from {response}")
