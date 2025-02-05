@@ -179,7 +179,7 @@ class AprilaireThermostatSerialInterface:
             self.send_command(f"{sn}F=A")
         response2 = await self.read_response()
         # TODO: check for the correct response
-        _LOGGER.info(f"ASI: Fan mode set {sn} for {inmode}, got back {response2}.")
+        _LOGGER.error(f"ASI: Fan mode set {sn} for {inmode}, got back {response2}.")
 
     async def get_state(self, sn):
         self.send_command(f"{sn}H?")
@@ -228,7 +228,7 @@ class AprilaireThermostatSerialInterface:
         else:
             _LOGGER.error(f"ASI: Invalid Setpoint type {setpoint_type}")
         response = await self.read_response()
-        if "OK" in response:
+        if int(value) in response:
             _LOGGER.info(f"ASI: Setpoint updated successfully for {sn}.")
         else:
             _LOGGER.error(f"ASI: Failed to update setpoint for {sn}, got {response} ({setpoint_type}={value})")

@@ -9,6 +9,10 @@ import time
 import random
 from .aprilair_serial_interface import AprilaireThermostatSerialInterface
 from .const import ATTR_TEMPERATURE
+from homeassistant.util import Throttle
+from datetime import timedelta
+
+MIN_TIME_BETWEEN_UPDATES = timedelta(seconds=30)
 
 
 _LOGGER = logging.getLogger(__name__)
@@ -123,6 +127,8 @@ class AprilaireThermostat(ClimateEntity):
         self._hvac_mode = mode
         self.async_write_ha_state()
 
+
+    @Throttle(MIN_TIME_BETWEEN_UPDATES)
     async def async_update(self):
 
         # Check if it's time to poll the thermostat
