@@ -140,11 +140,13 @@ class AprilaireThermostat(ClimateEntity):
     @Throttle(MIN_TIME_BETWEEN_UPDATES)
     async def async_update(self):
         current_time = time.time()
+        _LOGGER.error(f"async_update? {self._sn} at {current_time} ")
         if current_time - self._last_update < self._polling_interval:
             return  # Skip update if polling interval hasn't passed
         
         self._last_update = current_time
 
+        _LOGGER.error(f"async_update!! {self._sn} at {current_time} ")
 
         """Fetch new data from the Aprilaire thermostat."""
         #_LOGGER.debug(f"Updating Aprilaire thermostat {self._sn} ")

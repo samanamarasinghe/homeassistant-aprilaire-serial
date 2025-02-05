@@ -17,7 +17,7 @@ class AprilaireThermostatSerialInterface:
         self.baudrate = baudrate
         self.reader = None
         self.writer = None
-        self._read_lock = asyncio.Lock()  # Async lock to prevent concurrent reads
+        self._readwrite_lock = asyncio.Lock()  # Async lock to prevent concurrent reads
 
     async def connect(self):
         """Establish a non-blocking serial connection."""
@@ -44,30 +44,34 @@ class AprilaireThermostatSerialInterface:
 
     async def read_response(self, timeout=5):
         """Read the response asynchronously with a timeout and lock."""
-        async with self._read_lock:  # Lock to prevent multiple concurrent reads
-            if not self.reader:
-                _LOGGER.error("Attempted to read response without an active connection")
-                return ""
-            
-            response = ""
-            try:
-                while True:
-                    # Wait up to 'timeout' seconds for each read operation
-                    data = await asyncio.wait_for(self.reader.read(50), timeout)
-                    if not data:
-                        break
-                    response += data.decode('utf-8')
-            except asyncio.TimeoutError:
-                _LOGGER.warning("Timeout reached while reading response")
-            except Exception as e:
-                _LOGGER.error(f"Error reading response: {e}")
+        if not self.reader:
+            _LOGGER.error("Attempted to read response without an active connection")
+            return ""
+        
+        response = ""
+        try:
+            while True:
+                # Wait up to 'timeout' seconds for each read operation
+                data = await asyncio.wait_for(self.reader.read(50), timeout)
+                if not data:
+                    break
+                response += data.decode('utf-8')
+        except asyncio.TimeoutError:
+            _LOGGER.warning("Timeout reached while reading response")
+        except Exception as e:
+            _LOGGER.error(f"Error reading response: {e}")
 
-            return response.strip()
+        return response.strip()
+    
+    async def command_response(self, command):
+        async with self._readwrite_lock:  # Lock to prevent multiple concurrent reads/writes
+            await self.send_command(command)
+            response = await self.read_response()
+        return response
 
     async def query_thermostats(self):
         """Query all connected thermostats."""
-        await self.send_command("SN?#")
-        response = await self.read_response()
+        response = await self.command_response("SN?#")
         thermostats = [line for line in response.split("\r") if line.startswith("SN")]
 
         await asyncio.sleep(0.5)
@@ -80,8 +84,7 @@ class AprilaireThermostatSerialInterface:
 
     async def get_temperature(self, sn):
         """Get the current temperature for a specific thermostat."""
-        await self.send_command(f"{sn}T?")
-        response = await self.read_response()
+        response = await self.command_response(f"{sn}T?")
         # Parse temperature from the response (assuming format is TEMP=XX.X)
         if "T=" in response:
             temp = response.split("T=")[1].replace("F","")
@@ -96,8 +99,7 @@ class AprilaireThermostatSerialInterface:
         return None
     
     async def get_name(self, sn):
-        await self.send_command(f"{sn}NAME?")
-        response = await self.read_response()
+        response = await self.command_response(f"{sn}NAME?")
         
         if response:
             return response[3:]  #Skip SN#
@@ -105,9 +107,7 @@ class AprilaireThermostatSerialInterface:
             return None
         
     async def get_state(self, sn):
-        await self.send_command(f"{sn}H?")
-        response = await self.read_response()
-        
+        response = await self.command_response(f"{sn}H?")        
         if response:
             return response
         else:
@@ -130,16 +130,14 @@ class AprilaireThermostatSerialInterface:
     mode_convert_from = {v: k for k,v in mode_convert_ret.items()}
         
     async def get_mode(self, sn):
-        await self.send_command(f"{sn}M?")
-        response = await self.read_response()
+        response = await self.command_response(f"{sn}M?")
         # Parse M=<mode>
         if "M=" in response:
             line = response.split("M=")[1]
             mode = self.mode_convert_from.get(line, None)
             if mode:
                 if mode == HVACMode.OFF:  # Check if fan is on
-                    await self.send_command(f"{sn}F?")
-                    response2 = await self.read_response()
+                    response2 = await self.command_response(f"{sn}F?")
                     line2 = response2.split("F=")[1]
                     if line2 == "A":
                         return mode
@@ -159,9 +157,7 @@ class AprilaireThermostatSerialInterface:
         if not mode:
             _LOGGER.error(f"ASI: Wrong mode {inmode} given")
 
-        await self.send_command(f"{sn}M={mode}")
-
-        response = await self.read_response()
+        response = await self.command_response(f"{sn}M={mode}")
         if self.mode_convert_ret[inmode] in response:
             #_LOGGER.info(f"ASI: Mode updated successfully for {sn} to {inmode}.")
             None
@@ -170,24 +166,22 @@ class AprilaireThermostatSerialInterface:
 
         # Now do the fan setup FAN_ONLY--> ON, rest --> A (Auto)
         if inmode == HVACMode.FAN_ONLY:
-            await self.send_command(f"{sn}F=ON")
+            response2 = await self.command_response(f"{sn}F=ON")
         else:
-            await self.send_command(f"{sn}F=A")
-        response2 = await self.read_response()
+            response2 = await self.command_response(f"{sn}F=A")
         if "F=" not in response2:
             _LOGGER.error(f"ASI: Fan mode set {sn} for {inmode}, got back {response2}.")
 
     async def get_setpoint(self, sn, setpoint_type):
         """Get the current temperature for a specific thermostat."""
         if setpoint_type == HVACMode.HEAT:
-            await self.send_command(f"{sn}SH?")
+            response = await self.command_response(f"{sn}SH?")
         elif setpoint_type == HVACMode.COOL:
-            await self.send_command(f"{sn}SC?")
+            response = await self.command_response(f"{sn}SC?")
         else:
             _LOGGER.error(f"ASI: Invalid Setpoint type {setpoint_type}")
             return None
-        
-        response = await self.read_response()
+    
         # Parse temperature from the response (assuming format is TEMP=XX.X)
         if "SC=" in response or "SH=" in response:
             temp = response.split("=")[1].replace("F","")
@@ -208,12 +202,12 @@ class AprilaireThermostatSerialInterface:
             return
 
         if setpoint_type == HVACMode.HEAT:
-            await self.send_command(f"{sn}SH={int(value)}")
+            response = await self.command_response(f"{sn}SH={int(value)}")
         elif setpoint_type == HVACMode.COOL:
-            await self.send_command(f"{sn}SC={int(value)}")
+            response = await self.command_response(f"{sn}SC={int(value)}")
         else:
             _LOGGER.error(f"ASI: Invalid Setpoint type {setpoint_type}")
-        response = await self.read_response()
+
         if int(value) in response:
             #_LOGGER.info(f"ASI: Setpoint updated successfully for {sn}.")
             None
