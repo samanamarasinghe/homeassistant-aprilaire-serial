@@ -24,6 +24,15 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
     port = config_entry.data.get("port", "/dev/ttyUSB0")
     baudrate = config_entry.data.get("baudrate", 9600)
     interface = AprilaireThermostatSerialInterface(port, baudrate)
+
+    # Establish the connection
+    try:
+        await interface.connect()
+    except Exception as e:
+        _LOGGER.error(f"Failed to connect to serial device: {e}")
+        return
+    
+    # use the connection
     (thermostats, names) = await interface.query_thermostats()
 
     if not thermostats:

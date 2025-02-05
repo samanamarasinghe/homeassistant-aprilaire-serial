@@ -67,7 +67,7 @@ class AprilaireThermostatSerialInterface:
         """Query all connected thermostats."""
         await self.send_command("SN?#")
         response = await self.read_response()
-        thermostats = [line for line in response.split("\n") if line.startswith("SN")]
+        thermostats = [line for line in response.split("\r") if line.startswith("SN")]
 
         await asyncio.sleep(0.5)
         names = []
@@ -82,16 +82,15 @@ class AprilaireThermostatSerialInterface:
         await self.send_command(f"{sn}T?")
         response = await self.read_response()
         # Parse temperature from the response (assuming format is TEMP=XX.X)
-        for line in response.split("\n"):
-            if "T=" in line:
-                temp = line.split("T=")[1].replace("F","")
-                #_LOGGER.info(f"ASI: Temperature for {sn}: {temp}°F")
-                try:
-                    return float(temp)
-                except:
-                    _LOGGER.error(f"ASI: {temp} is not a valid temprature")
-            else:
-                _LOGGER.error(f"ASI: For temprature got {line} from {response}")
+        if "T=" in response:
+            temp = response.split("T=")[1].replace("F","")
+            #_LOGGER.info(f"ASI: Temperature for {sn}: {temp}°F")
+            try:
+                return float(temp)
+            except:
+                _LOGGER.error(f"ASI: {temp} is not a valid temprature")
+        else:
+            _LOGGER.error(f"ASI: For temprature got from {response}")
         _LOGGER.error(f"ASI: No temperature data received for {sn}.")
         return None
     
@@ -189,16 +188,15 @@ class AprilaireThermostatSerialInterface:
         
         response = await self.read_response()
         # Parse temperature from the response (assuming format is TEMP=XX.X)
-        for line in response.split("\n"):
-            if "SC=" in line or "SH=" in line:
-                temp = line.split("=")[1].replace("F","")
-                #_LOGGER.info(f"ASI: Setpoint {setpoint_type} for {sn}: {temp}°F")
-                try:
-                    return float(temp)
-                except:
-                    _LOGGER.error(f"ASI: {temp} connot be made a temprature")
-            else:
-                _LOGGER.error(f"ASI: For setpoint temprature got {line} from {response}")
+        if "SC=" in response or "SH=" in response:
+            temp = response.split("=")[1].replace("F","")
+            #_LOGGER.info(f"ASI: Setpoint {setpoint_type} for {sn}: {temp}°F")
+            try:
+                return float(temp)
+            except:
+                _LOGGER.error(f"ASI: {temp} connot be made a temprature")
+        else:
+            _LOGGER.error(f"ASI: For setpoint temprature got  {response}")
         _LOGGER.error(f"ASI: No setpoint temperature data received for {sn} ({setpoint_type}).")
         return None
 
