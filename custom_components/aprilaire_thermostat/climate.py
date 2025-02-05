@@ -48,6 +48,7 @@ class AprilaireThermostat(ClimateEntity):
         self._polling_interval = config.data.get("polling_interval", 60) 
         self._bidrectional = config.data.get("bidirectional", False) 
         self._last_update = 0
+        self._firsttime = True
 
     @property
     def name(self):
@@ -137,7 +138,10 @@ class AprilaireThermostat(ClimateEntity):
         if tt:
             self._current_temperature = tt 
 
-        if self._bidrectional:
+        if self._bidrectional or self._firsttime:
+            # Need to get what is in the thermostats after initialization
+            self._firsttime = False
+
             # Get target temperature (e.g., setpoint)
             # Here, you could implement separate commands for reading setpoints if needed
             sht = await self._interface.get_setpoint(self._sn, HVACMode.HEAT)
