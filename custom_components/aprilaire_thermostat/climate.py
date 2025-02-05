@@ -22,6 +22,8 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
         _LOGGER.error("No thermostats found")
         interface.close()
         return
+    
+    _LOGGER.error(f"Setting up Thermostats:{thermostats}, with names:")
 
     entities = [AprilaireThermostat(interface, sn, nm) for sn, nm in zip(thermostats, names)]
     async_add_entities(entities)
