@@ -109,16 +109,18 @@ class AprilaireThermostatSerialInterface:
         return None
     
     mode_convert_to = {
-        HVACMode.AUTO : "A",
         HVACMode.COOL : "C",
         HVACMode.HEAT : "H",
-        HVACMode.OFF : "OFF"
+        HVACMode.OFF : "OFF",
+        HVACMode.HEAT_COOL : "A",
+        HVACMode.FAN_ONLY : "OFF"  # NO Heat or Cool when Fan only
     }
     mode_convert_ret = {
-        HVACMode.AUTO : "AUTO",
         HVACMode.COOL : "COOL",
         HVACMode.HEAT : "HEAT",
-        HVACMode.OFF : "OFF"
+        HVACMode.OFF : "OFF",
+        HVACMode.HEAT_COOL: "AUTO",
+        HVACMode.FAN_ONLY: "OFF"  # No Heat or Cool when Fan only
     }
     mode_convert_from = {v: k for k,v in mode_convert_ret.items()}
 
@@ -130,6 +132,16 @@ class AprilaireThermostatSerialInterface:
             line = response.split("M=")[1]
             mode = self.mode_convert_from.get(line, None)
             if mode:
+                if mode == HVACMode.OFF:  # Check if fan is on
+                    self.send_command(f"{sn}F?")
+                    response2 = await self.read_response()
+                    line2 = response2.split("=")[1]
+                    if line2 == "A":
+                        return mode
+                    elif line2 == "ON":
+                        return HVACMode.FAN_ONLY
+                    else:
+                        _LOGGER.error(f"ASI: Fan check got {line2} from {response2} for mode for {sn}")
                 return mode
             _LOGGER.error(f"ASI: Got {line} from {response} for mode for {sn}")
         else:
@@ -148,7 +160,7 @@ class AprilaireThermostatSerialInterface:
 
     async def set_mode(self, sn, inmode):
         """Set the mode for a specific thermostat."""
-        mode = self.mode_convert_to.get(inmode, None)
+        mode = self.mode_convert_to.get(inmode, None)  # FAN_ONLY will set this to OFF
         if not mode:
             _LOGGER.error(f"ASI: Wrong mode {inmode} given")
 
@@ -159,6 +171,15 @@ class AprilaireThermostatSerialInterface:
             _LOGGER.info(f"ASI: Mode updated successfully for {sn} to {inmode}.")
         else:
             _LOGGER.error(f"ASI: Failed to update mode for {sn}, Got {response}.")
+
+        # Now do the fan setup FAN_ONLY--> ON, rest --> A (Auto)
+        if inmode == HVACMode.FAN_ONLY:
+            self.send_command(f"{sn}F=ON")
+        else:
+            self.send_command(f"{sn}F=A")
+        response2 = await self.read_response()
+        # TODO: check for the correct response
+        _LOGGER.info(f"ASI: Fan mode set {sn} for {inmode}, got back {response2}.")
 
 
     async def get_setpoint(self, sn, setpoint_type):

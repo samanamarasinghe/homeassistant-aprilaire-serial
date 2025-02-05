@@ -6,13 +6,14 @@ from homeassistant.components.climate.const import (
 from homeassistant.util.unit_system import UnitOfTemperature
 import logging
 import time
+import random
 from .aprilair_serial_interface import AprilaireThermostatSerialInterface
 from .const import ATTR_TEMPERATURE
 
 
 _LOGGER = logging.getLogger(__name__)
 
-SUPPORTED_HVAC_MODES = [HVACMode.OFF, HVACMode.HEAT, HVACMode.COOL, HVACMode.AUTO]
+SUPPORTED_HVAC_MODES = [HVACMode.OFF, HVACMode.HEAT, HVACMode.COOL, HVACMode.FAN_ONLY, HVACMode.HEAT_COOL]
 
 async def async_setup_entry(hass, config_entry, async_add_entities):
     """Setup climate entities for Aprilaire thermostats."""
@@ -46,7 +47,7 @@ class AprilaireThermostat(ClimateEntity):
         self._setpoint_heat_temperature = None
         self._hvac_mode = HVACMode.OFF
         self._preset_mode = None
-        self._polling_interval = config.data.get("polling_interval", 60) 
+        self._polling_interval = config.data.get("polling_interval", 60) + random.randint(0, 10) # so all don't go at the same time
         self._bidrectional = config.data.get("bidirectional", False) 
         self._last_update = 0
         self._firsttime = True
