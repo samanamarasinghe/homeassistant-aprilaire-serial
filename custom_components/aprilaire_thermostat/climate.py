@@ -5,15 +5,12 @@ from homeassistant.components.climate.const import (
 )
 from homeassistant.util.unit_system import UnitOfTemperature
 import logging
-import time
-import random
 from .aprilair_serial_interface import AprilaireThermostatSerialInterface
 from .const import ATTR_TEMPERATURE
 from homeassistant.util import Throttle
 from datetime import timedelta
 
 MIN_TIME_BETWEEN_UPDATES = timedelta(seconds=60)
-
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -24,6 +21,7 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
     port = config_entry.data.get("port", "/dev/ttyUSB0")
     baudrate = config_entry.data.get("baudrate", 9600)
     interface = AprilaireThermostatSerialInterface(port, baudrate)
+    unused = config_entry.data.get("polling_interval", 60) 
 
     # Establish the connection
     try:
@@ -60,7 +58,6 @@ class AprilaireThermostat(ClimateEntity):
         self._setpoint_heat_temperature = None
         self._hvac_mode = HVACMode.OFF
         self._preset_mode = None
-        self._polling_interval = config.data.get("polling_interval", 60) + random.randint(0, 10) # so all don't go at the same time
         self._bidrectional = config.data.get("bidirectional", False) 
         self._firsttime = True
         self._last_update = 0
@@ -139,15 +136,6 @@ class AprilaireThermostat(ClimateEntity):
 
     @Throttle(MIN_TIME_BETWEEN_UPDATES)
     async def async_update(self):
-        current_time = time.time()
-        _LOGGER.error(f"async_update? {self._sn} at {current_time} ")
-        if current_time - self._last_update < self._polling_interval:
-            return  # Skip update if polling interval hasn't passed
-        
-        self._last_update = current_time
-
-        _LOGGER.error(f"async_update!! {self._sn} at {current_time} ")
-
         """Fetch new data from the Aprilaire thermostat."""
         #_LOGGER.debug(f"Updating Aprilaire thermostat {self._sn} ")
 

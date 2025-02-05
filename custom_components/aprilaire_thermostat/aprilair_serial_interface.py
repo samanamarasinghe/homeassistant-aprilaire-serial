@@ -1,11 +1,9 @@
-import serial
-import time
+
 import logging
 import asyncio
 from serial_asyncio import open_serial_connection
 
 from homeassistant.components.climate.const import (
-    ClimateEntityFeature,
     HVACMode,
 )
 
@@ -17,7 +15,7 @@ class AprilaireThermostatSerialInterface:
         self.baudrate = baudrate
         self.reader = None
         self.writer = None
-        self._readwrite_lock = asyncio.Lock()  # Async lock to prevent concurrent reads
+        self._readwrite_lock = asyncio.Lock()  # prevent read write pairs overlapping
 
     async def connect(self):
         """Establish a non-blocking serial connection."""
@@ -139,7 +137,7 @@ class AprilaireThermostatSerialInterface:
                 if mode == HVACMode.OFF:  # Check if fan is on
                     response2 = await self.command_response(f"{sn}F?")
                     line2 = response2.split("F=")[1]
-                    if line2 == "A":
+                    if line2 == "AUTO":
                         return mode
                     elif line2 == "ON":
                         return HVACMode.FAN_ONLY
