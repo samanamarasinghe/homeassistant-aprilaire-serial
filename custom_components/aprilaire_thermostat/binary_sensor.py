@@ -1,4 +1,5 @@
 import logging
+import asyncio
 from homeassistant.components.binary_sensor import BinarySensorEntity
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from .const import DOMAIN
@@ -8,10 +9,11 @@ _LOGGER = logging.getLogger(__name__)
 
 async def async_setup_entry(hass, config_entry, async_add_entities):
     """Set up Aprilaire binary sensors based on a config entry."""
-    thermostat_data = hass.data["aprilaire_thermostat"].get("thermostats")
-    if not thermostat_data:
-        _LOGGER.error("No thermostat data found for sensors")
-        return
+    thermostat_data = None
+    while not thermostat_data:
+        thermostat_data = hass.data["aprilaire_thermostat"].get("thermostats")
+        if not thermostat_data:
+            await asyncio.sleep(1)
 
     interface, thermostats, names = thermostat_data
 
