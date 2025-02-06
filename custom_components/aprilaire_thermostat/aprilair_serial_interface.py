@@ -71,15 +71,15 @@ class AprilaireThermostatSerialInterface:
 
         return response.strip()
     
-    async def command_response(self, command):
+    async def command_response(self, command, timeout=0.5):
         async with self._readwrite_lock:  # Lock to prevent multiple concurrent reads/writes
             await self.send_command(command)
-            response = await self.read_response()
+            response = await self.read_response(timeout)
         return response
 
     async def query_thermostats(self):
         """Query all connected thermostats."""
-        response = await self.command_response("SN?#")
+        response = await self.command_response("SN?#", 0.5)
         thermostats = [line for line in response.split("\r") if line.startswith("SN")]
 
         await asyncio.sleep(0.5)
