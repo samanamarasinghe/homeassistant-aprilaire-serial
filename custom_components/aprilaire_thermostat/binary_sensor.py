@@ -2,15 +2,25 @@ import logging
 from homeassistant.components.binary_sensor import BinarySensorEntity
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from .const import DOMAIN
+from .sensor import AprilaireTemperatureSensor, AprilaireModeSensor
 
 _LOGGER = logging.getLogger(__name__)
 
 async def async_setup_entry(hass, config_entry, async_add_entities):
     """Set up Aprilaire binary sensors based on a config entry."""
-    interface = hass.data[DOMAIN]["interface"]
+    thermostat_data = hass.data["aprilaire_thermostat"].get("thermostats")
+    if not thermostat_data:
+        _LOGGER.error("No thermostat data found for sensors")
+        return
+
+    interface, thermostats, names = thermostat_data
 
     sensors = [
-        AprilaireConnectionSensor(interface, "aprilaire_connection")
+        AprilaireTemperatureSensor(interface, sn, name)
+        for sn, name in zip(thermostats, names)
+    ] + [
+        AprilaireModeSensor(interface, sn, name)
+        for sn, name in zip(thermostats, names)
     ]
 
     async_add_entities(sensors, update_before_add=True)

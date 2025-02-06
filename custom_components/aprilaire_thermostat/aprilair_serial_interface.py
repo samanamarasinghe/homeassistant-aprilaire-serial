@@ -27,6 +27,15 @@ class AprilaireThermostatSerialInterface:
         except Exception as e:
             _LOGGER.error(f"Failed to connect to serial device: {e}")
             raise
+    
+    
+    async def check_connection(self):
+        """Check if the serial connection is still active."""
+        if not self.writer or not self.reader:
+            _LOGGER.error("No active serial connection to check")
+            return False
+        # FIX-THIS!!!
+        return True
 
     async def send_command(self, command):
         """Send a command over the serial connection."""

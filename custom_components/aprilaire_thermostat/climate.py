@@ -44,6 +44,11 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
     
     _LOGGER.error(f"Using {port}:{baudrate} setting up Thermostats:{thermostats}, with names: {names}")
 
+    # Store thermostat data in hass.data
+    hass.data.setdefault("aprilaire_thermostat", {})
+    hass.data["aprilaire_thermostat"]["thermostats"] = (interface, thermostats, names)
+
+
     entities = [AprilaireThermostat(interface, sn, nm, config_entry) for sn, nm in zip(thermostats, names)]
     async_add_entities(entities)
 
