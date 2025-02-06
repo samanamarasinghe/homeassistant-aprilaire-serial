@@ -49,7 +49,7 @@ class AprilaireThermostatSerialInterface:
         except Exception as e:
             _LOGGER.error(f"Error sending command '{command}': {e}")
 
-    async def read_response(self, timeout=0.25):
+    async def read_response(self, timeout=0.35):
         """Read the response asynchronously with a timeout and lock."""
         if not self.reader:
             _LOGGER.error("Attempted to read response without an active connection")

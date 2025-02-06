@@ -13,7 +13,7 @@ class AprilaireTemperatureSensor(SensorEntity):
         """Initialize the temperature sensor."""
         self._interface = interface
         self._sn = sn
-        self._attr_name = f"{name} Temperature"
+        self._attr_name = f"Aprilaire {name} Temperature"
         self._attr_device_class = "temperature"
         self._attr_native_unit_of_measurement = "°F"
         self._temperature = None
@@ -38,7 +38,7 @@ class AprilaireModeSensor(SensorEntity):
         """Initialize the mode sensor."""
         self._interface = interface
         self._sn = sn
-        self._attr_name = f"{name} Mode"
+        self._attr_name = f"Aprilaire {name} Mode"
         self._mode = None
 
     @property
@@ -52,3 +52,26 @@ class AprilaireModeSensor(SensorEntity):
             self._mode = await self._interface.get_mode(self._sn)
         except Exception as e:
             _LOGGER.error(f"Error updating mode for thermostat {self._sn}: {e}")
+
+
+class AprilaireActionSensor(SensorEntity):
+    """Action for the current mode of a thermostat."""
+
+    def __init__(self, interface, sn, name):
+        """Initialize the mode sensor."""
+        self._interface = interface
+        self._sn = sn
+        self._attr_name = f"Aprilaire {name} Action"
+        self._mode = None
+
+    @property
+    def native_value(self):
+        """Return the current mode."""
+        return self._mode
+
+    async def async_update(self):
+        """Fetch the latest mode."""
+        try:
+            self._mode = await self._interface.get_state(self._sn)
+        except Exception as e:
+            _LOGGER.error(f"Error updating state for thermostat {self._sn}: {e}")
