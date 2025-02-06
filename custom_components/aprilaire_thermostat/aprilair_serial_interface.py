@@ -4,7 +4,7 @@ import asyncio
 from serial_asyncio import open_serial_connection
 
 from homeassistant.components.climate.const import (
-    HVACMode,
+    HVACMode, HVACAction
 )
 
 _LOGGER = logging.getLogger(__name__)
@@ -49,7 +49,7 @@ class AprilaireThermostatSerialInterface:
         except Exception as e:
             _LOGGER.error(f"Error sending command '{command}': {e}")
 
-    async def read_response(self, timeout=0.35):
+    async def read_response(self, timeout=0.25):
         """Read the response asynchronously with a timeout and lock."""
         if not self.reader:
             _LOGGER.error("Attempted to read response without an active connection")
@@ -71,7 +71,7 @@ class AprilaireThermostatSerialInterface:
 
         return response.strip()
     
-    async def command_response(self, command, timeout=0.5):
+    async def command_response(self, command, timeout=0.25):
         async with self._readwrite_lock:  # Lock to prevent multiple concurrent reads/writes
             await self.send_command(command)
             response = await self.read_response(timeout)
@@ -113,11 +113,30 @@ class AprilaireThermostatSerialInterface:
             return response[3:]  #Skip SN#
         else:
             return None
+    
+    def state2action(self, state):
+        # the State is G?Y1?W1?Y2?W2?B+O-   ? is either + or -
+        # Assuming G is for the fan, W1 for 1st stage heat (W2 for 2nd stage?)
+        # Y1 is for cool (Y2?)  Not sure what B and O are (B s always seems to be + and O -)
+        try:
+            if state[state.find("W1")+2] == "+":
+                return HVACAction.HEATING
+            elif state[state.find("Y1")+2] == "+":
+                return HVACAction.COOLING
+            elif state[state.find("G")+1] == "+":
+                return HVACAction.FAN
+            elif self._hvac_mode == HVACMode.OFF:
+                return HVACAction.OFF
+            else:
+                return HVACAction.IDLE
+        except:
+            _LOGGER.error(f"Could not convert {state} to action ")
+            return None
         
     async def get_state(self, sn):
         response = await self.command_response(f"{sn}H?")        
         if response:
-            return response
+            return self.state2action(response)
         else:
             return None
 

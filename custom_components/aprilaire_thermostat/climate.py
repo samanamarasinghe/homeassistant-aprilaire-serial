@@ -190,27 +190,13 @@ class AprilaireThermostat(ClimateEntity):
         await self._interface.set_mode(self._sn, mode)
         self.async_write_ha_state()
 
-    def state2action(self, state):
-        # the State is G?Y1?W1?Y2?W2?B+O-   ? is either + or -
-        # Assuming G is for the fan, W1 for 1st stage heat (W2 for 2nd stage?)
-        # Y1 is for cool (Y2?)  Not sure what B and O are (B s always seems to be + and O -)
-        try:
-            if state[state.find("W1")+2] == "+":
-                if state[state.find("G")+1] == "+":
-                    return HVACAction.HEATING
-                else:
-                    return HVACAction.PREHEATING
-            elif state[state.find("Y1")+2] == "+":
-                return HVACAction.COOLING
-            elif state[state.find("G")+1] == "+":
-                return HVACAction.FAN
-            elif self._hvac_mode == HVACMode.OFF:
-                return HVACAction.OFF
-            else:
-                return HVACAction.IDLE
-        except:
-            _LOGGER.error(f"For {self._sn} could not convert {state} to action ")
-            return None
+    
+    async def get_action(self):
+        st = await self._interface.get_state(self._sn)
+        if st:
+            act = st
+            return act
+        return None
 
     @Throttle(MIN_TIME_BETWEEN_UPDATES)
     async def async_update(self):

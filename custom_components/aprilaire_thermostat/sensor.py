@@ -1,6 +1,9 @@
 import logging
 from homeassistant.components.sensor import SensorEntity
 from .const import DOMAIN
+from homeassistant.components.climate.const import (
+    HVACMode, HVACAction
+)
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -26,7 +29,9 @@ class AprilaireTemperatureSensor(SensorEntity):
     async def async_update(self):
         """Fetch the latest temperature."""
         try:
-            self._temperature = await self._interface.get_temperature(self._sn)
+            temp = await self._interface.get_temperature(self._sn)
+            if temp and temp > 10:
+                self._temperature = temp
         except Exception as e:
             _LOGGER.error(f"Error updating temperature for thermostat {self._sn}: {e}")
 
@@ -49,9 +54,12 @@ class AprilaireModeSensor(SensorEntity):
     async def async_update(self):
         """Fetch the latest mode."""
         try:
-            self._mode = await self._interface.get_mode(self._sn)
+            mode = await self._interface.get_mode(self._sn)
+            if mode in HVACMode:
+                self._mode = mode
         except Exception as e:
             _LOGGER.error(f"Error updating mode for thermostat {self._sn}: {e}")
+
 
 
 class AprilaireActionSensor(SensorEntity):
@@ -62,16 +70,18 @@ class AprilaireActionSensor(SensorEntity):
         self._interface = interface
         self._sn = sn
         self._attr_name = f"Aprilaire {name} Action"
-        self._mode = None
+        self._action = None
 
     @property
     def native_value(self):
         """Return the current mode."""
-        return self._mode
+        return self._action
 
     async def async_update(self):
         """Fetch the latest mode."""
         try:
-            self._mode = await self._interface.get_state(self._sn)
+            action = await self._interface.get_state(self._sn)
+            if action in HVACAction:
+                self._action = action
         except Exception as e:
-            _LOGGER.error(f"Error updating state for thermostat {self._sn}: {e}")
+            _LOGGER.error(f"Error updating action for thermostat {self._sn}: {e}")
