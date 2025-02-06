@@ -2,7 +2,7 @@
   "name": "Aprilaire Thermostat",
   "content_in_root": false,
   "render_readme": true,
-  "domains": ["climate"],
+  "domains": ["climate", "binary_sensor"],
   "iot_class": "local_polling",
   "country": "US"
 }

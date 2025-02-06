@@ -123,15 +123,14 @@ class AprilaireThermostat(ClimateEntity):
         return self._hvac_mode
     
     @property
-    def hvac_action(self) -> HVACAction | None:
+    def hvac_action(self):
         """Return the current running hvac operation if supported."""
-        return self._attr_hvac_action
+        return self._hvac_action
 
     @property
     def supported_features(self):
         """Return the features supported by this thermostat."""
-        return [ClimateEntityFeature.TARGET_TEMPERATURE, ClimateEntityFeature.FAN_MODE, 
-                ClimateEntityFeature.TURN_OFF, ClimateEntityFeature.TURN_ON]
+        return ClimateEntityFeature.TARGET_TEMPERATURE | ClimateEntityFeature.FAN_MODE | ClimateEntityFeature.TURN_OFF | ClimateEntityFeature.TURN_ON
 
     @property
     def hvac_modes(self):

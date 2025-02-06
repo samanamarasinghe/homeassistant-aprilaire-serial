@@ -1,7 +1,7 @@
 {
   "domain": "aprilaire_thermostat",
   "name": "Aprilaire Thermostat",
-  "version": "0.9.47",
+  "version": "0.9.48",
   "documentation": "https://github.com/samanamarasinghe/homeassistant-components/tree/main/custom_components/aprilaire_thermostat",
   "dependencies": [],
   "codeowners": ["@samanamarasinghe"],

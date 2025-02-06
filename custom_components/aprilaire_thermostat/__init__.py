@@ -9,7 +9,7 @@ from .aprilair_serial_interface import AprilaireThermostatSerialInterface
 _LOGGER = logging.getLogger(__name__)
 
 # Pre-import platform modules to avoid blocking during async setup
-PLATFORMS = ["climate"]
+PLATFORMS = ["climate", "binary_sensor"]
 
 async def async_setup(hass: HomeAssistant, config: dict):
     """Set up Aprilaire thermostat integration from YAML."""
