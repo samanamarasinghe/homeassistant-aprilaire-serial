@@ -6,6 +6,7 @@ from homeassistant.components.climate.const import (
     FAN_AUTO,
     FAN_ON,
 )
+
 from homeassistant.util.unit_system import UnitOfTemperature
 import logging
 from .aprilair_serial_interface import AprilaireThermostatSerialInterface
@@ -155,9 +156,10 @@ class AprilaireThermostat(ClimateEntity):
         
     async def async_set_fan_mode(self, fan_mode):
         if fan_mode == FAN_ON:
-            await self._interface.set_fan(True)
+            await self._interface.set_fan(self._sn, True)
         else:
-            await self._interface.set_fan(False)
+            await self._interface.set_fan(self._sn, False)
+        self.async_write_ha_state()
 
     async def async_set_temperature(self, **kwargs):
         """Set the target temperature for the thermostat."""
@@ -165,17 +167,16 @@ class AprilaireThermostat(ClimateEntity):
             target_temp = kwargs[ATTR_TEMPERATURE]
             _LOGGER.info("Setting target temperature to %s°F for %s", target_temp, self._sn)
 
-            self._target_temperature = target_temp
             # cool setupoint cannot be lower than heat setpoint.
             if self._hvac_mode == HVACMode.COOL:
                 await self._interface.set_setpoint(self._sn, HVACMode.COOL, target_temp)
                 self._setpoint_cool_temperature = target_temp
-                if self._setpoint_heat_temperature >= target_temp:
+                if not self._setpoint_heat_temperature or self._setpoint_heat_temperature >= target_temp:
                     self._setpoint_heat_temperature = target_temp - 1
             elif self._hvac_mode == HVACMode.HEAT:
                 await self._interface.set_setpoint(self._sn, HVACMode.HEAT, target_temp)
                 self._setpoint_heat_temperature = target_temp
-                if self._setpoint_cool_temperature <= target_temp:
+                if not self._setpoint_cool_temperature or self._setpoint_cool_temperature <= target_temp:
                     self._setpoint_cool_temperature = target_temp + 1
             else:
                 _LOGGER.error(f"Cannot set setpoint when mode is {self._hvac_mode} or not {self._setpoint_heat_temperature} < {target_temp} < {self._setpoint_cool_temperature}")
@@ -194,8 +195,9 @@ class AprilaireThermostat(ClimateEntity):
     async def get_action(self):
         st = await self._interface.get_state(self._sn)
         if st:
-            act = st
-            return act
+            if st == HVACAction.OFF and self._hvac_mode != HVACMode.OFF:
+                st = HVACAction.IDLE
+            return st
         return None
 
     @Throttle(MIN_TIME_BETWEEN_UPDATES)
@@ -211,7 +213,7 @@ class AprilaireThermostat(ClimateEntity):
         #Get the current state
         st = await self._interface.get_state(self._sn)
         if st:
-            self._hvac_action = self.state2action(st)
+            self._hvac_action = st
 
         #Name will not change, so get it once.
         if self._firsttime:

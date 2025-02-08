@@ -125,10 +125,8 @@ class AprilaireThermostatSerialInterface:
                 return HVACAction.COOLING
             elif state[state.find("G")+1] == "+":
                 return HVACAction.FAN
-            elif self._hvac_mode == HVACMode.OFF:
-                return HVACAction.OFF
             else:
-                return HVACAction.IDLE
+                return HVACAction.OFF
         except:
             _LOGGER.error(f"Could not convert {state} to action ")
             return None
@@ -199,7 +197,7 @@ class AprilaireThermostatSerialInterface:
         if "F=" not in response2:
             _LOGGER.error(f"ASI: Fan mode set {sn} for {inmode}, got back {response2}.")
 
-    async def set_fan(self, onauto):
+    async def set_fan(self, sn, onauto):
         if onauto:
             response = await self.command_response(f"{sn}F=ON")
         else:
@@ -244,7 +242,7 @@ class AprilaireThermostatSerialInterface:
         else:
             _LOGGER.error(f"ASI: Invalid Setpoint type {setpoint_type}")
 
-        if int(value) in response:
+        if str(int(value)) in response:
             #_LOGGER.info(f"ASI: Setpoint updated successfully for {sn}.")
             None
         else:
