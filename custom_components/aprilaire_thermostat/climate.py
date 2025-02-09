@@ -72,6 +72,10 @@ class AprilaireThermostat(ClimateEntity):
         self._bidrectional = config.data.get("bidirectional", False) 
         self._firsttime = True
 
+    @property
+    def unique_id(self):
+        """Return the unique ID for this thermostat."""
+        return f"aprilaire_thermostat_{self._sn}_{self._name}"
 
     @property
     def name(self):
