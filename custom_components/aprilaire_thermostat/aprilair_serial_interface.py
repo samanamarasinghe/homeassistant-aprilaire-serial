@@ -93,7 +93,7 @@ class AprilaireThermostatSerialInterface:
     async def get_temperature(self, sn):
         """Get the current temperature for a specific thermostat."""
         response = await self.command_response(f"{sn}T?")
-        # Parse temperature from the response (assuming format is TEMP=XX.X)
+        # Parse temperature from the response (assuming format is T=XX.X)
         if "T=" in response:
             temp = response.split("T=")[1].replace("F","")
             #_LOGGER.info(f"ASI: Temperature for {sn}: {temp}°F")
@@ -161,15 +161,16 @@ class AprilaireThermostatSerialInterface:
             line = response.split("M=")[1]
             mode = self.mode_convert_from.get(line, None)
             if mode:
-                if mode == HVACMode.OFF:  # Check if fan is on
-                    response2 = await self.command_response(f"{sn}F?")
-                    line2 = response2.split("F=")[1]
-                    if line2 == "AUTO":
-                        return mode
-                    elif line2 == "ON":
-                        return HVACMode.FAN_ONLY
-                    else:
-                        _LOGGER.error(f"ASI: Fan check got {line2} from {response2} for mode for {sn}")
+                # We are no longer doing the fan here!
+                # if mode == HVACMode.OFF:  # Check if fan is on
+                #     response2 = await self.command_response(f"{sn}F?")
+                #     line2 = response2.split("F=")[1]
+                #     if line2 == "AUTO":
+                #         return mode
+                #     elif line2 == "ON":
+                #         return HVACMode.FAN_ONLY
+                #     else:
+                #         _LOGGER.error(f"ASI: Fan check got {line2} from {response2} for mode for {sn}")
                 return mode
             _LOGGER.error(f"ASI: Got {line} from {response} for mode for {sn}")
         else:
@@ -189,13 +190,14 @@ class AprilaireThermostatSerialInterface:
         else:
             _LOGGER.error(f"ASI: Failed to update mode for {sn}, Got {response}.")
 
-        # Now do the fan setup FAN_ONLY--> ON, rest --> A (Auto)
-        if inmode == HVACMode.FAN_ONLY:
-            response2 = await self.command_response(f"{sn}F=ON")
-        else:
-            response2 = await self.command_response(f"{sn}F=A")
-        if "F=" not in response2:
-            _LOGGER.error(f"ASI: Fan mode set {sn} for {inmode}, got back {response2}.")
+        # No longer doing the Fan from set_mode
+        # # Now do the fan setup FAN_ONLY--> ON, rest --> A (Auto)
+        # if inmode == HVACMode.FAN_ONLY:
+        #     response2 = await self.command_response(f"{sn}F=ON")
+        # else:
+        #     response2 = await self.command_response(f"{sn}F=A")
+        # if "F=" not in response2:
+        #     _LOGGER.error(f"ASI: Fan mode set {sn} for {inmode}, got back {response2}.")
 
     async def set_fan(self, sn, onauto):
         if onauto:
