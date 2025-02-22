@@ -1,0 +1,11 @@
+{
+  "name": "Veris Branch Current Monitor",
+  "content_in_root": false,
+  "render_readme": true,
+  "domains": ["sensor", "homeassistant"],
+  "iot_class": "local_polling",
+  "zip_release": false,
+  "file_types": ["python", "json"],
+  "config_flow": true,
+  "country": "US"
+}
