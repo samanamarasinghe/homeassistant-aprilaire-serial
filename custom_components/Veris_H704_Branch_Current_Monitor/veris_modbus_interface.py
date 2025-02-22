@@ -10,7 +10,7 @@ _LOGGER = logging.getLogger(__name__)
 class VerisModbusInterface:
     """Handles asynchronous Modbus communication with the Veris Branch Power Monitor."""
 
-    def __init__(self, port="/dev/ttyUSB0", baudrate=DEFAULT_BAUDRATE, slave_id=DEFAULT_SLAVE_ID):
+    def __init__(self, port="/dev/ttyUSB1", baudrate=DEFAULT_BAUDRATE, slave_id=DEFAULT_SLAVE_ID):
         """Initialize the Modbus interface."""
         self.port = port
         self.baudrate = baudrate
