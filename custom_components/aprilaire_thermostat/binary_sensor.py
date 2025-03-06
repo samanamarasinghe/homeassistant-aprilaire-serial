@@ -3,7 +3,7 @@ import asyncio
 from homeassistant.components.binary_sensor import BinarySensorEntity
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from .const import DOMAIN
-from .sensor import AprilaireTemperatureSensor, AprilaireModeSensor, AprilaireActionSensor
+from .sensor import AprilaireTemperatureSensor, AprilaireModeSensor, AprilaireActionSensor, AprilaireSetpointSensor
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -25,6 +25,9 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
         for sn, name in zip(thermostats, names)
     ] + [
         AprilaireActionSensor(interface, sn, name)
+        for sn, name in zip(thermostats, names)
+    ]  + [
+        AprilaireSetpointSensor(interface, sn, name)
         for sn, name in zip(thermostats, names)
     ]
 

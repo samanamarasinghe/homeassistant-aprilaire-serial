@@ -85,3 +85,32 @@ class AprilaireActionSensor(SensorEntity):
                 self._action = action
         except Exception as e:
             _LOGGER.error(f"Error updating action for thermostat {self._sn}: {e}")
+
+
+class AprilaireSetpointSensor(SensorEntity):
+    """Sensor for the current setpoint of a thermostat."""
+
+    def __init__(self, interface, sn, name):
+        """Initialize the setpoint sensor."""
+        self._interface = interface
+        self._sn = sn
+        self._attr_name = f"Aprilaire {name} Setpoint"
+        self._attr_device_class = "temperature"
+        self._attr_native_unit_of_measurement = "°F"
+        self._temperature = None
+
+    @property
+    def native_value(self):
+        """Return the setpoint temperature."""
+        return self._temperature
+
+    async def async_update(self):
+        """Fetch the setpoint temperature."""
+        try:
+            mode = await self._interface.get_mode(self._sn)
+            if mode in [HVACMode.HEAT, HVACMode.COOL]:
+                self._temperature = await self._interface.get_setpoint(self._sn, mode)
+            else:
+                self._temperature = None
+        except Exception as e:
+            _LOGGER.error(f"Error getting the setpoint for thermostat {self._sn}: {e}")
