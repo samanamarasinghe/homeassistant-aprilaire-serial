@@ -93,7 +93,7 @@ class AprilaireThermostatSerialInterface:
     async def get_temperature(self, sn):
         """Get the current temperature for a specific thermostat."""
         response = await self.command_response(f"{sn}T?")
-        # Parse temperature from the response (assuming format is T=XX.X)
+        # Parse temperature from the response (assuming format is T=XXF)
         if "T=" in response:
             temp = response.split("T=")[1].replace("F","")
             #_LOGGER.info(f"ASI: Temperature for {sn}: {temp}°F")
@@ -218,7 +218,7 @@ class AprilaireThermostatSerialInterface:
             _LOGGER.error(f"ASI: Invalid Setpoint type {setpoint_type}")
             return None
     
-        # Parse temperature from the response (assuming format is TEMP=XX.X)
+        # Parse temperature from the response (assuming format is SC=XXF or SH=XXF)
         if "SC=" in response or "SH=" in response:
             temp = response.split("=")[1].replace("F","")
             #_LOGGER.info(f"ASI: Setpoint {setpoint_type} for {sn}: {temp}°F")

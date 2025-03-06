@@ -17,6 +17,7 @@ class AprilaireTemperatureSensor(SensorEntity):
         self._interface = interface
         self._sn = sn
         self._attr_name = f"Aprilaire {name} Temperature"
+        self._attr_unique_id = f"aprilaire_{sn}_{name}_temprature"
         self._attr_device_class = "temperature"
         self._attr_native_unit_of_measurement = "°F"
         self._temperature = None
@@ -44,6 +45,7 @@ class AprilaireModeSensor(SensorEntity):
         self._interface = interface
         self._sn = sn
         self._attr_name = f"Aprilaire {name} Mode"
+        self._attr_unique_id = f"aprilaire_{sn}_{name}_mode"
         self._mode = None
 
     @property
@@ -70,6 +72,7 @@ class AprilaireActionSensor(SensorEntity):
         self._interface = interface
         self._sn = sn
         self._attr_name = f"Aprilaire {name} Action"
+        self._attr_unique_id = f"aprilaire_{sn}_{name}_action"        
         self._action = None
 
     @property
@@ -95,6 +98,7 @@ class AprilaireSetpointSensor(SensorEntity):
         self._interface = interface
         self._sn = sn
         self._attr_name = f"Aprilaire {name} Setpoint"
+        self._attr_unique_id = f"aprilaire_{sn}_{name}_setpoint"
         self._attr_device_class = "temperature"
         self._attr_native_unit_of_measurement = "°F"
         self._temperature = None
@@ -110,6 +114,7 @@ class AprilaireSetpointSensor(SensorEntity):
             mode = await self._interface.get_mode(self._sn)
             if mode in [HVACMode.HEAT, HVACMode.COOL]:
                 temp = await self._interface.get_setpoint(self._sn, mode)
+                # Sometimes the temprature reading can get bad values. If so, keep the old!
                 if 50 <= temp <= 90:
                     self._temperature = temp
             else:
