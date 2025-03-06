@@ -109,8 +109,11 @@ class AprilaireSetpointSensor(SensorEntity):
         try:
             mode = await self._interface.get_mode(self._sn)
             if mode in [HVACMode.HEAT, HVACMode.COOL]:
-                self._temperature = await self._interface.get_setpoint(self._sn, mode)
+                temp = await self._interface.get_setpoint(self._sn, mode)
+                if 50 <= temp <= 90:
+                    self._temperature = temp
             else:
                 self._temperature = None
+            
         except Exception as e:
             _LOGGER.error(f"Error getting the setpoint for thermostat {self._sn}: {e}")
