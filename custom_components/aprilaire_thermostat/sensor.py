@@ -1,13 +1,74 @@
 import logging
+import asyncio
 from homeassistant.components.sensor import SensorEntity
+from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from .const import DOMAIN
 from homeassistant.components.climate.const import (
     HVACMode, HVACAction
 )
 
+
 _LOGGER = logging.getLogger(__name__)
 
+async def async_setup_entry(hass, config_entry, async_add_entities):
+    _LOGGER.error(f"Setting up ")
+    """Set up Aprilaire sensors based on a config entry."""
+    thermostat_data = None
+    while not thermostat_data:
+        thermostat_data = hass.data["aprilaire_thermostat"].get("thermostats")
+        if not thermostat_data:
+            await asyncio.sleep(5)
 
+    if not thermostat_data:
+        _LOGGER.error("No thermostat data found in hass.data! Check integration setup.")
+        return
+        
+    interface, thermostats, names = thermostat_data
+    sensors = [
+        AprilaireTemperatureSensor(interface, sn, name)
+        for sn, name in zip(thermostats, names)
+    ] + [
+        AprilaireModeSensor(interface, sn, name)
+        for sn, name in zip(thermostats, names)
+    ] + [
+        AprilaireActionSensor(interface, sn, name)
+        for sn, name in zip(thermostats, names)
+    ] + [
+        AprilaireSetpointSensor(interface, sn, name)
+        for sn, name in zip(thermostats, names)
+    ] + [
+        AprilaireConnectionSensor(interface, name)  # Add connection sensor
+        for name in names
+    ]
+
+    async_add_entities(sensors, update_before_add=True)
+
+
+class AprilaireConnectionSensor(SensorEntity):
+    """A sensor to monitor the connection status of the Aprilaire thermostat."""
+
+    def __init__(self, interface, name):
+        """Initialize the sensor."""
+        self._interface = interface
+        self._attr_name = f"{name} Connection Status"
+        self._attr_unique_id = f"aprilaire_{name}_connection"
+        self._attr_device_class = "connectivity"  # Optional for sensors
+        self._attr_native_unit_of_measurement = None  # No unit
+        self._connection_status = "Disconnected"
+
+    @property
+    def native_value(self):
+        """Return the connection status as a string (instead of binary True/False)."""
+        return self._connection_status
+
+    async def async_update(self):
+        """Fetch new state data for the sensor."""
+        try:
+            connected = await self._interface.check_connection()
+            self._connection_status = "Connected" if connected else "Disconnected"
+        except Exception as e:
+            _LOGGER.error(f"Error updating connection status: {e}")
+            self._connection_status = "Error"
 
 class AprilaireTemperatureSensor(SensorEntity):
     """Sensor for the current temperature of a thermostat."""
