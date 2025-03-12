@@ -92,7 +92,7 @@ class AprilaireTemperatureSensor(SensorEntity):
         """Fetch the latest temperature."""
         try:
             temp = await self._interface.get_temperature(self._sn)
-            if temp and temp > 10:
+            if temp and 50 <= temp <= 90:
                 self._temperature = temp
         except Exception as e:
             _LOGGER.error(f"Error updating temperature for thermostat {self._sn}: {e}")
@@ -176,7 +176,7 @@ class AprilaireSetpointSensor(SensorEntity):
             if mode in [HVACMode.HEAT, HVACMode.COOL]:
                 temp = await self._interface.get_setpoint(self._sn, mode)
                 # Sometimes the temprature reading can get bad values. If so, keep the old!
-                if 50 <= temp <= 90:
+                if temp and 50 <= temp <= 90:
                     self._temperature = temp
             else:
                 self._temperature = None
